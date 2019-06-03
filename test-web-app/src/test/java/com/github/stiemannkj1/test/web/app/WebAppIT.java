@@ -30,8 +30,8 @@ public final class WebAppIT {
 
     private static final int TOTAL_REQUESTS_TO_SEND = 100;
     private static final Pattern GET_LINKS_PATTERN = Pattern.compile("<a\\s+href=[\"]([^\"]+)[\"]");
-    private static final String TEST_WEBAPP_BASE_URL = "http://localhost:" +
-        System.getProperty("test.webapp.port", "8080") + "/test-web-app";
+    private static final String TEST_WEBAPP_BASE_URL = "http://localhost:"
+            + System.getProperty("test.webapp.port", "8080") + "/test-web-app";
 
     @Test
     public final void testWebAppIT() {
@@ -46,13 +46,24 @@ public final class WebAppIT {
 
         Assert.assertFalse(links.isEmpty());
 
-        IntStream.range(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
+        final int totalLinks = links.size();
 
-            final int pageNumber = ThreadLocalRandom.current().nextInt(links.size()) + 1;
-            final String pageName = "page" + pageNumber + ".jsp";
-            final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + pageName);
-            Assert.assertTrue(pageHtmlResponse.contains(pageName) && pageHtmlResponse.contains("Hello World!"));
+        // Ensure that all pages are tested at least once.
+        IntStream.rangeClosed(1, totalLinks).parallel().forEach((i) -> {
+            assertPageRendered(i);
         });
+
+        // Send multiple requests to random pages.
+        IntStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
+            final int pageNumber = ThreadLocalRandom.current().nextInt(totalLinks) + 1;
+            assertPageRendered(pageNumber);
+        });
+    }
+
+    private void assertPageRendered(int pageNumber) {
+        final String pageName = "page" + pageNumber + ".jsp";
+        final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + pageName);
+        Assert.assertTrue(pageHtmlResponse.contains(pageName) && pageHtmlResponse.contains("Hello World!"));
     }
 
     private String getHtmlResponse(String urlString) throws UncheckedIOException {

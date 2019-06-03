@@ -206,6 +206,42 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>wildfly</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.wildfly.plugins</groupId>
+                        <artifactId>wildfly-maven-plugin</artifactId>
+                        <version>2.0.1.Final</version>
+                        <configuration>
+                            <fork>true</fork>
+                            <javaOpts>-Djboss.http.port=${it.test.server.port}</javaOpts>
+                            <name>test-web-app.war</name>
+                            <version>16.0.0.Final</version>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>wildfly-run</id>
+                                <goals>
+                                    <goal>start</goal>
+                                    <goal>deploy</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                            </execution>
+                            <execution>
+                                <id>wildfly-shutdown</id>
+                                <goals>
+                                    <goal>undeploy</goal>
+                                    <goal>shutdown</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
 </project>

@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,14 +26,15 @@ import org.junit.Test;
  *
  * @author kyle
  */
-public class WebAppIT {
+public final class WebAppIT {
 
     private static final int TOTAL_REQUESTS_TO_SEND = 100;
     private static final Pattern GET_LINKS_PATTERN = Pattern.compile("<a\\s+href=[\"]([^\"]+)[\"]");
-    private static final String TEST_WEBAPP_BASE_URL = "http://localhost:" + System.getProperty("test.webapp.port", "8080") + "/test-web-app";
+    private static final String TEST_WEBAPP_BASE_URL = "http://localhost:" +
+        System.getProperty("test.webapp.port", "8080") + "/test-web-app";
 
     @Test
-    public void testWebAppIT() throws MalformedURLException, IOException {
+    public final void testWebAppIT() {
 
         final String indexHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL);
         final Matcher matcher = GET_LINKS_PATTERN.matcher(indexHtml);

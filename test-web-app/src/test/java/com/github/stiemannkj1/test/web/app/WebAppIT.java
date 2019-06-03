@@ -31,7 +31,7 @@ public final class WebAppIT {
     private static final int TOTAL_REQUESTS_TO_SEND = 100;
     private static final Pattern GET_LINKS_PATTERN = Pattern.compile("<a\\s+href=[\"]([^\"]+)[\"]");
     private static final String TEST_WEBAPP_BASE_URL = "http://localhost:"
-            + System.getProperty("test.webapp.port", "8080") + "/test-web-app";
+            + System.getProperty("it.test.server.port", "8080") + "/test-web-app";
 
     @Test
     public final void testWebAppIT() {

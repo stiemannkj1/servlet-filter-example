@@ -118,6 +118,14 @@
                         <goals>
                             <goal>integration-test</goal>
                         </goals>
+                        <configuration>
+                            <systemProperties>
+                                <property>
+                                    <name>it.test.server.port</name>
+                                    <value>${it.test.server.port}</value>
+                                </property>
+                            </systemProperties>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>verify</id>
@@ -211,6 +219,10 @@
                         <groupId>org.eclipse.jetty</groupId>
                         <artifactId>jetty-maven-plugin</artifactId>
                         <version>9.4.18.v20190429</version>
+                        <configuration>
+                            <stopKey>jetty.stop.key</stopKey>
+                            <stopPort>8081</stopPort>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>jetty-run</id>
@@ -220,10 +232,9 @@
                                 <phase>pre-integration-test</phase>
                                 <configuration>
                                     <httpConnector>
+                                        <host>localhost</host>
                                         <port>${it.test.server.port}</port>
                                     </httpConnector>
-                                    <stopKey>jetty.stop.key</stopKey>
-                                    <stopPort>8081</stopPort>
                                     <waitForChild>false</waitForChild>
                                     <webApp>
                                         <contextPath>/${project.name}</contextPath>
@@ -236,10 +247,6 @@
                                     <goal>stop</goal>
                                 </goals>
                                 <phase>post-integration-test</phase>
-                                <configuration>
-                                    <stopKey>jetty.stop.key</stopKey>
-                                    <stopPort>8081</stopPort>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

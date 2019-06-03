@@ -9,7 +9,6 @@
     <artifactId>test-web-app</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
-
     <name>test-web-app</name>
 
     <properties>
@@ -147,7 +146,7 @@
                                 <phase>pre-integration-test</phase>
                                 <configuration>
                                     <fork>true</fork>
-                                    <path>/test-web-app</path>
+                                    <path>/${project.name}</path>
                                     <port>${it.test.server.port}</port>
                                 </configuration>
                             </execution>
@@ -172,10 +171,10 @@
                         <artifactId>maven-embedded-glassfish-plugin</artifactId>
                         <version>5.1</version>
                         <configuration>
-                            <app>target/test-web-app-${project.version}.war</app>
+                            <app>target/${project.name}-${project.version}.war</app>
                             <port>${it.test.server.port}</port>
-                            <name>test-web-app</name>
-                            <contextRoot>test-web-app</contextRoot>
+                            <name>${project.name}</name>
+                            <contextRoot>${project.name}</contextRoot>
                         </configuration>
                         <executions>
                             <execution>
@@ -222,7 +221,7 @@
                                     <stopPort>8081</stopPort>
                                     <waitForChild>false</waitForChild>
                                     <webApp>
-                                        <contextPath>/test-web-app</contextPath>
+                                        <contextPath>/${project.name}</contextPath>
                                     </webApp>
                                 </configuration>
                             </execution>
@@ -253,7 +252,7 @@
                         <configuration>
                             <fork>true</fork>
                             <javaOpts>-Djboss.http.port=${it.test.server.port}</javaOpts>
-                            <name>test-web-app.war</name>
+                            <name>${project.name}.war</name>
                             <version>16.0.0.Final</version>
                         </configuration>
                         <executions>

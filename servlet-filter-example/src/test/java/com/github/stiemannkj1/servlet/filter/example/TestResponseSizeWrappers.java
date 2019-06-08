@@ -83,8 +83,8 @@ public final class TestResponseSizeWrappers {
 
     @Test
     public final void testResponseSizeHttpServletResponseWrapperOutputStream() throws IOException {
-        testResponseSizeHttpServletResponseWrapper(false, true);
-        testResponseSizeHttpServletResponseWrapper(false, false);
+        testResponseSizeHttpServletResponseWrapper(WriteResponseWith.OUTPUT_STREAM, Flush.RESPONSE);
+        testResponseSizeHttpServletResponseWrapper(WriteResponseWith.OUTPUT_STREAM, Flush.OUTPUT_STREAM);
     }
 
     @Test
@@ -105,7 +105,7 @@ public final class TestResponseSizeWrappers {
         Assert.assertEquals(0, testResponseWrapper.getResponseSize());
 
         try {
-            testResponseSizeHttpServletResponseWrapper(true, true);
+            testResponseSizeHttpServletResponseWrapper(WriteResponseWith.WRITER, Flush.RESPONSE);
         } catch (IllegalStateException e) {
             throw new AssertionError("ResponseSizeHttpServletResponseWrapper.reset() failed to reset buffer state.", e);
         }
@@ -113,26 +113,26 @@ public final class TestResponseSizeWrappers {
 
     @Test
     public final void testResponseSizeHttpServletResponseWrapperWriter() throws IOException {
-        testResponseSizeHttpServletResponseWrapper(true, true);
-        testResponseSizeHttpServletResponseWrapper(true, false);
+        testResponseSizeHttpServletResponseWrapper(WriteResponseWith.WRITER, Flush.RESPONSE);
+        testResponseSizeHttpServletResponseWrapper(WriteResponseWith.WRITER, Flush.WRITER);
     }
 
-    private void testResponseSizeHttpServletResponseWrapper(boolean testWriter, boolean flushResponse)
+    private void testResponseSizeHttpServletResponseWrapper(WriteResponseWith writeResponseWith, Flush flush)
             throws IOException {
 
         final String testResponse = "test";
         final ResponseSizeHttpServletResponseWrapper testResponseWrapper =
                 new ResponseSizeHttpServletResponseWrapper(newMockHttpServletResponse());
 
-        if (testWriter) {
+        if (writeResponseWith.equals(WriteResponseWith.WRITER)) {
             testResponseWrapper.getWriter().print(testResponse);
         } else {
             testResponseWrapper.getOutputStream().print(testResponse);
         }
 
-        if (flushResponse) {
+        if (flush.equals(Flush.RESPONSE)) {
             testResponseWrapper.flushBuffer();
-        } else if (testWriter) {
+        } else if (flush.equals(Flush.WRITER)) {
             testResponseWrapper.getWriter().flush();
         } else {
             testResponseWrapper.getOutputStream().flush();
@@ -149,5 +149,16 @@ public final class TestResponseSizeWrappers {
         when(httpServletResponse.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
         return httpServletResponse;
+    }
+
+    enum WriteResponseWith {
+        OUTPUT_STREAM,
+        WRITER
+    }
+
+    enum Flush {
+        OUTPUT_STREAM,
+        RESPONSE,
+        WRITER
     }
 }

@@ -32,8 +32,11 @@ THE SOFTWARE.
         <h1>Pages</h1>
         <ul>
             <li><a href="page1.jsp">page1.jsp</a></li>
-            <li><a href="page1.jsp">page2.jsp</a></li>
-            <li><a href="page1.jsp">page3.jsp</a></li>
+            <li><a href="page2.jsp">page2.jsp</a></li>
+            <li><a href="page3.jsp">page3.jsp</a></li>
+            <li><a href="page4.html">page4.html</a></li>
+            <li><a href="page5">page5</a></li>
+            <li><a href="page6">page6</a></li>
         </ul>
     </body>
 </html>

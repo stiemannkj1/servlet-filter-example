@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>page4.html</title>
+    </head>
+    <body>
+        <h1>page4.html</h1>
+        <p>Hello World!</p>
+        <p id="today"></p>
+        <script type="text/javascript">// <![CDATA[
+            var today = new Date();
+            document.getElementById('today').innerHTML =
+                'It is ' + today.getFullYear() + '-' + today.getMonth() +
+                '-' + today.getDay() + ' ' + today.getHours() + ':' +
+                today.getMinutes() + ':' + today.getSeconds();
+        // ]]></script>
+        <a href="./index.jsp">Back to index.jsp.</a>
+    </body>
+</html>

@@ -30,9 +30,11 @@ import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -56,32 +58,26 @@ public final class WebAppIT {
 
         final String indexHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL);
         final Matcher matcher = GET_LINKS_PATTERN.matcher(indexHtml);
-        final Set<String> links = new HashSet<>();
+        final Set<String> pagesSet = new HashSet<>();
 
         while (matcher.find()) {
-            links.add(matcher.group(1));
+            pagesSet.add(matcher.group(1));
         }
 
-        Assert.assertFalse(links.isEmpty());
+        Assert.assertFalse(pagesSet.isEmpty());
 
-        final int totalLinks = links.size();
+        final int totalLinks = pagesSet.size();
+        final List<String> pages = Collections.unmodifiableList(new ArrayList<String>(pagesSet));
 
-        // Ensure that all pages are tested at least once.
-        IntStream.rangeClosed(1, totalLinks).parallel().forEach((i) -> {
-            assertPageRendered(i);
-        });
-
-        // Send multiple requests to random pages.
+        // Send multiple concurrent requests to each page.
         IntStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
-            final int pageNumber = ThreadLocalRandom.current().nextInt(totalLinks) + 1;
-            assertPageRendered(pageNumber);
+            assertPageRendered(pages.get(i % totalLinks));
         });
     }
 
-    private void assertPageRendered(int pageNumber) {
-        final String pageName = "page" + pageNumber + ".jsp";
-        final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + pageName);
-        Assert.assertTrue(pageHtmlResponse.contains(pageName) && pageHtmlResponse.contains("Hello World!"));
+    private void assertPageRendered(String page) {
+        final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + page);
+        Assert.assertTrue(pageHtmlResponse.contains(page) && pageHtmlResponse.contains("Hello World!"));
     }
 
     private String getHtmlResponse(String urlString) throws UncheckedIOException {

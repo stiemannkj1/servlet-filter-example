@@ -36,4 +36,13 @@ THE SOFTWARE.
             <max-age>0</max-age>
         </cookie-config>
     </session-config>
+    <servlet>
+        <servlet-name>TestWebAppServlet</servlet-name>
+        <servlet-class>com.github.stiemannkj1.test.web.app.TestWebAppServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TestWebAppServlet</servlet-name>
+        <url-pattern>/page5</url-pattern>
+        <url-pattern>/page6</url-pattern>
+    </servlet-mapping>
 </web-app>

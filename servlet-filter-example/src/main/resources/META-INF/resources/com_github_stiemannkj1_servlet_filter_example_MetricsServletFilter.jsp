@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8" session="false" %>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
 <html>
     <head>
@@ -31,9 +32,14 @@ THE SOFTWARE.
     <body>
         <h1>Metrics</h1>
         <ul>
-            <li><strong>Minimum Response Size:</strong> ${minimumResponseSize}</li>
-            <li><strong>Maximum Response Size:</strong> ${maximumResponseSize}</li>
-            <li><strong>Average Response Size:</strong> ${averageResponseSize}</li>
+            <li><strong>Minimum Servlet Response Size (in bytes):</strong> <span id="minimumResponseSize">${minimumResponseSize}</span></li>
+            <li><strong>Maximum Servlet Response Size (in bytes):</strong> <span id="maximumResponseSize">${maximumResponseSize}</span></li>
+            <li><strong>Average Servlet Response Size (in bytes):</strong> <span id="averageResponseSize">${averageResponseSize}</span></li>
+        </ul>
+        <ul>
+            <li><strong>Minimum Servlet Response Time (in nanoseconds):</strong> <span id="minimumResponseTime">${minimumResponseTime}</span></li>
+            <li><strong>Maximum Servlet Response Time (in nanoseconds):</strong> <span id="maximumResponseTime">${maximumResponseTime}</span></li>
+            <li><strong>Average Servlet Response Time (in nanoseconds):</strong> <span id="averageResponseTime">${averageResponseTime}</span></li>
         </ul>
     </body>
 </html>

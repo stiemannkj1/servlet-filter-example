@@ -39,7 +39,6 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.junit.Assert;
@@ -49,15 +48,15 @@ import static org.mockito.Mockito.*;
 /**
  * @author Kyle Stiemann
  */
-public final class TestMetricsServletFilter {
+public final class TestMetricsFilter {
 
-    private static final long TOTAL_REQUESTS_TO_SEND = 1000;
+    private static final long TOTAL_REQUESTS_TO_SEND = 100;
 
     @Test
-    public final void testServletMetricFilterUniqueId() throws ServletException, IOException {
+    public final void testMetricsFilterUniqueId() throws ServletException, IOException {
 
-        final Filter servletMetricFilter = new MetricsServletFilter();
-        servletMetricFilter.init(mock(FilterConfig.class));
+        final Filter metricsFilter = new MetricsServletFilter();
+        metricsFilter.init(mock(FilterConfig.class));
 
         final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
@@ -72,12 +71,13 @@ public final class TestMetricsServletFilter {
 
         LongStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND + 1).parallel().forEach((i) -> {
             try {
-                servletMetricFilter.doFilter(servletRequest, servletResponse, filterChain);
+                metricsFilter.doFilter(servletRequest, servletResponse, filterChain);
             } catch (IOException | ServletException e) {
                 throw new RuntimeException(e);
             }
         });
 
+        // Sort all response ids and compare each one with the next to ensure that none are the same.
         final List<String> sortedResponseIds = new ArrayList<>(responseIds);
         sortedResponseIds.sort(null);
 
@@ -85,18 +85,75 @@ public final class TestMetricsServletFilter {
             Assert.assertNotEquals(sortedResponseIds.get(i), sortedResponseIds.get(i + 1));
         }
 
-        servletMetricFilter.destroy();
+        metricsFilter.destroy();
     }
 
     @Test
-    public final void testServletMetricFilterResponseSize() throws ServletException, IOException {
+    public final void testMetricsFilterGetResponseSize() throws ServletException, IOException {
 
-        final Filter metricsServletFilter = new MetricsServletFilter();
-        metricsServletFilter.init(mock(FilterConfig.class));
+        final Filter metricsFilter = new MetricsServletFilter();
+        metricsFilter.init(mock(FilterConfig.class));
+        testMetricsFilterResponseSize(metricsFilter);
 
+        metricsFilter.destroy();
+    }
+
+    @Test
+    public final void testMetricsFilterGetResponseTime() throws ServletException, IOException {
+
+        final Filter metricsFilter = new MetricsServletFilter();
+        metricsFilter.init(mock(FilterConfig.class));
+        testMetricsFilterResponseSize(metricsFilter);
+
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+
+        final Long minimumResponseTime = (Long) request.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_TIME);
+        Assert.assertTrue(0 < minimumResponseTime);
+
+        final Long maximumResponseTime = (Long) request.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_TIME);
+        Assert.assertTrue((minimumResponseTime < maximumResponseTime) ||
+                (minimumResponseTime == maximumResponseTime));
+
+        final Double averageResponseTime = (Double) request.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_TIME);
+        Assert.assertTrue((minimumResponseTime < averageResponseTime && averageResponseTime < maximumResponseTime) ||
+                (minimumResponseTime == maximumResponseTime));
+
+        metricsFilter.destroy();
+    }
+
+    private HttpServletRequest newMockHttpServletRequestWithMutableAttributes() throws IOException {
+
+        final HttpServletRequest request = mock(HttpServletRequest.class);
+        final Map<String, Object> requestAttrs = new HashMap<>();
+
+        when(request.getAttribute(any(String.class))).thenAnswer((invocation) -> {
+            return requestAttrs.get(invocation.getArgument(0, String.class));
+        });
+
+        doAnswer((invocation) -> {
+            requestAttrs.put(invocation.getArgument(0, String.class), invocation.getArgument(1, Object.class));
+            return null;
+        }).when(request).setAttribute(any(String.class), any(Object.class));
+
+        return request;
+    }
+
+    private void requestMetricsPage(HttpServletRequest mockHttpServletRequest, Filter metricsServletFilter)
+            throws ServletException, IOException {
+
+        when(mockHttpServletRequest.getServletPath()).thenReturn(MetricsServletFilter.METRICS_JSP_PAGE);
+
+        final FilterChain filterChain = mock(FilterChain.class);
+        metricsServletFilter.doFilter(mockHttpServletRequest, mock(HttpServletResponse.class), filterChain);
+    }
+
+    private void testMetricsFilterResponseSize(Filter metricsFilter) throws ServletException, IOException {
+
+        final long minimumResponseSize = 1L;
+        final long maximumResponseSize = TOTAL_REQUESTS_TO_SEND;
         final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
-        final long minimumResponseSize = 1L;
         final StringWriter stringWriter = new StringWriter();
         final PrintWriter printWriter = new PrintWriter(stringWriter);
         when(servletResponse.getWriter()).thenReturn(printWriter);
@@ -110,7 +167,9 @@ public final class TestMetricsServletFilter {
 
         when(servletResponse.getOutputStream()).thenReturn(servletOutputStream);
 
-        LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
+        // Send several requests in paralell to the metrics filter. The number of the request in the sequence also
+        // indicates the size of the response in bytes.
+        LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).parallel().forEach((i) -> {
             try {
                 final FilterChain filterChain = mock(FilterChain.class);
 
@@ -119,7 +178,7 @@ public final class TestMetricsServletFilter {
                     ServletOutputStream responseServletOutputStream = null;
                     PrintWriter responsePrintWriter = null;
 
-                    // Test half with getWriter() and half with getOutputStream().
+                    // Test half with getWriter() and half with getOutputStream() to fully test the API.
                     final boolean testWriter = (i % 2 == 0);
 
                     for (long j = 0; j < i; j++) {
@@ -135,41 +194,24 @@ public final class TestMetricsServletFilter {
                     return null;
                 }).when(filterChain).doFilter(any(ServletRequest.class), any(ServletResponse.class));
 
-                metricsServletFilter.doFilter(servletRequest, servletResponse, filterChain);
+                metricsFilter.doFilter(servletRequest, servletResponse, filterChain);
             } catch (IOException | ServletException e) {
                 throw new RuntimeException(e);
             }
         });
 
-        Assert.assertNull(servletRequest.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_SIZE));
-        Assert.assertNull(servletRequest.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_SIZE));
-        Assert.assertNull(servletRequest.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_SIZE));
+        Assert.assertTrue(stringWriter.toString().length() ==
+                LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).sum());
 
-        when(servletRequest.getServletPath()).thenReturn(MetricsServletFilter.METRICS_JSP_PAGE);
-
-        final Map<String, Object> requestAttrs = new HashMap<>();
-
-        when(servletRequest.getAttribute(any(String.class))).thenAnswer((invocation) -> {
-            return requestAttrs.get(invocation.getArgument(0, String.class));
-        });
-
-        doAnswer((invocation) -> {
-            requestAttrs.put(invocation.getArgument(0, String.class), invocation.getArgument(1, Object.class));
-            return null;
-        }).when(servletRequest).setAttribute(any(String.class), any(Object.class));
-
-        final FilterChain filterChain = mock(FilterChain.class);
-        metricsServletFilter.doFilter(servletRequest, servletResponse, filterChain);
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
 
         Assert.assertEquals(minimumResponseSize,
-                servletRequest.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_SIZE));
-        Assert.assertEquals(TOTAL_REQUESTS_TO_SEND,
-                servletRequest.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_SIZE));
+                request.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_SIZE));
+        Assert.assertEquals(maximumResponseSize,
+                request.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_SIZE));
         Assert.assertEquals(
-                LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).asDoubleStream().average().getAsDouble(),
-                servletRequest.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_SIZE));
-        Assert.assertTrue(stringWriter.toString().length() > TOTAL_REQUESTS_TO_SEND);
-
-        metricsServletFilter.destroy();
+                LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).asDoubleStream().average().getAsDouble(),
+                request.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_SIZE));
     }
 }

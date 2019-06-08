@@ -25,10 +25,10 @@ package com.github.stiemannkj1.servlet.filter.example;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.LongSummaryStatistics;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -48,16 +48,21 @@ public final class MetricsServletFilter implements Filter {
     static final String MINIMUM_RESPONSE_SIZE = "minimumResponseSize";
     static final String MAXIMUM_RESPONSE_SIZE = "maximumResponseSize";
     static final String AVERAGE_RESPONSE_SIZE = "averageResponseSize";
+    static final String MINIMUM_RESPONSE_TIME = "minimumResponseTime";
+    static final String MAXIMUM_RESPONSE_TIME = "maximumResponseTime";
+    static final String AVERAGE_RESPONSE_TIME = "averageResponseTime";
     static final String METRICS_JSP_PAGE =
             "/" + MetricsServletFilter.class.getName().replace(".", "_") + ".jsp";
 
     private final AtomicLong uniqueResponseId = new AtomicLong();
+    private final ConcurrentLinkedQueue<Long> responseTimes = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<Long> responseSizes = new ConcurrentLinkedQueue<>();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         uniqueResponseId.set(0);
         responseSizes.clear();
+        responseTimes.clear();
     }
 
     @Override
@@ -69,20 +74,19 @@ public final class MetricsServletFilter implements Filter {
 
         if (servletPath != null && servletPath.equals(METRICS_JSP_PAGE)) {
 
-            List<Long> responseSizes = new ArrayList<>(this.responseSizes);
-            long minimumResponseSize = responseSizes.stream().min(Comparator.naturalOrder()).orElse(0L);
-            httpServletRequest.setAttribute(MINIMUM_RESPONSE_SIZE, minimumResponseSize);
-            long maximumResponseSize = responseSizes.stream().max(Comparator.naturalOrder()).orElse(0L);
-            httpServletRequest.setAttribute(MAXIMUM_RESPONSE_SIZE, maximumResponseSize);
-            double averageResponseSize = responseSizes.stream().mapToDouble(i -> i).average().orElse(0L);
-            httpServletRequest.setAttribute(AVERAGE_RESPONSE_SIZE, averageResponseSize);
+            setMetricsAttributes(httpServletRequest, responseSizes, MAXIMUM_RESPONSE_SIZE, MINIMUM_RESPONSE_SIZE,
+                    AVERAGE_RESPONSE_SIZE);
+            setMetricsAttributes(httpServletRequest, responseTimes, MAXIMUM_RESPONSE_TIME, MINIMUM_RESPONSE_TIME,
+                    AVERAGE_RESPONSE_TIME);
             chain.doFilter(httpServletRequest, response);
         } else {
 
             final ResponseSizeHttpServletResponseWrapper httpServletResponse =
                     new ResponseSizeHttpServletResponseWrapper((HttpServletResponse) response);
             httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, Long.toString(uniqueResponseId.getAndIncrement()));
+            long startTime = System.nanoTime();
             chain.doFilter(httpServletRequest, httpServletResponse);
+            responseTimes.add(System.nanoTime() - startTime);
             responseSizes.add(httpServletResponse.getResponseSize());
         }
     }
@@ -91,5 +95,15 @@ public final class MetricsServletFilter implements Filter {
     public void destroy() {
         uniqueResponseId.set(0);
         responseSizes.clear();
+        responseTimes.clear();
+    }
+
+    private void setMetricsAttributes(HttpServletRequest httpServletRequest, ConcurrentLinkedQueue<Long> metrics,
+            String maxAttrName, String minAttrName, String averageAttrName) {
+        final LongSummaryStatistics stats =
+                new ArrayList<>(metrics).stream().collect(Collectors.summarizingLong(Long::longValue));
+        httpServletRequest.setAttribute(maxAttrName, stats.getMax());
+        httpServletRequest.setAttribute(minAttrName, stats.getMin());
+        httpServletRequest.setAttribute(averageAttrName, stats.getAverage());
     }
 }

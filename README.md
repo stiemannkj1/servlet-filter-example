@@ -20,7 +20,7 @@ mvn clean verify -P glassfish
 To build and test the project on Jetty 9.4.18, run:
 
 ```
-mvn clean verify -P jetty
+mvn clean install && (cd test-web-app/ && mvn clean verify -P jetty)
 ```
 
 To build and test the project on WildFly 16.0.0.Final, run:

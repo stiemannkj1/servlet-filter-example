@@ -46,15 +46,25 @@ import org.junit.Test;
  *
  * @author Kyle Stiemann
  */
-public final class WebAppIT {
+public final class MetricsFilterIT {
 
     private static final int TOTAL_REQUESTS_TO_SEND = 100;
     private static final Pattern GET_LINKS_PATTERN = Pattern.compile("<a\\s+href=[\"]([^\"]+)[\"]");
+    private static final Pattern GET_MINIMUM_RESPONSE_SIZE = Pattern.compile(getMetricRegex("minimumResponseSize"));
+    private static final Pattern GET_MAXIMUM_RESPONSE_SIZE = Pattern.compile(getMetricRegex("maximumResponseSize"));
+    private static final Pattern GET_AVERAGE_RESPONSE_SIZE = Pattern.compile(getMetricRegex("averageResponseSize"));
+    private static final Pattern GET_MINIMUM_RESPONSE_TIME = Pattern.compile(getMetricRegex("minimumResponseTime"));
+    private static final Pattern GET_MAXIMUM_RESPONSE_TIME = Pattern.compile(getMetricRegex("maximumResponseTime"));
+    private static final Pattern GET_AVERAGE_RESPONSE_TIME = Pattern.compile(getMetricRegex("averageResponseSize"));
     private static final String TEST_WEBAPP_BASE_URL =
             "http://localhost:" + System.getProperty("it.test.server.port", "8080") + "/test-web-app";
 
+    private static String getMetricRegex(String id) {
+        return "id=\"" + id + "\"[^>]*>([^<]+)";
+    }
+
     @Test
-    public final void testWebAppIT() {
+    public final void testMetricsFilter() {
 
         final String indexHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL);
         final Matcher matcher = GET_LINKS_PATTERN.matcher(indexHtml);
@@ -73,6 +83,15 @@ public final class WebAppIT {
         IntStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
             assertPageRendered(pages.get(i % totalLinks));
         });
+
+        final String metricsHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" +
+                "com_github_stiemannkj1_servlet_filter_example_MetricsServletFilter.jsp");
+        Assert.assertTrue(getMetric(GET_MINIMUM_RESPONSE_SIZE, metricsHtml) > 0);
+        Assert.assertTrue(getMetric(GET_MAXIMUM_RESPONSE_SIZE, metricsHtml) > 0);
+        Assert.assertTrue(getMetric(GET_AVERAGE_RESPONSE_SIZE, metricsHtml) > 0);
+        Assert.assertTrue(getMetric(GET_MINIMUM_RESPONSE_TIME, metricsHtml) > 0);
+        Assert.assertTrue(getMetric(GET_MAXIMUM_RESPONSE_TIME, metricsHtml) > 0);
+        Assert.assertTrue(getMetric(GET_AVERAGE_RESPONSE_TIME, metricsHtml) > 0);
     }
 
     private void assertPageRendered(String page) {
@@ -96,5 +115,11 @@ public final class WebAppIT {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private double getMetric(Pattern getMetricPattern, String metricsHtml) {
+        final Matcher matcher = getMetricPattern.matcher(metricsHtml);
+        matcher.find();
+        return Double.parseDouble(matcher.group(1));
     }
 }

@@ -1,3 +1,26 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2019 Kyle Stiemann.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package com.github.stiemannkj1.servlet.filter.example;
 
 import java.io.IOException;
@@ -23,15 +46,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 
-
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
- *
- * @author kyle
+ * @author Kyle Stiemann
  */
 public final class TestMetricsServletFilter {
 
@@ -42,6 +58,7 @@ public final class TestMetricsServletFilter {
 
         final Filter servletMetricFilter = new MetricsServletFilter();
         servletMetricFilter.init(mock(FilterConfig.class));
+
         final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
         final ConcurrentLinkedQueue<String> responseIds = new ConcurrentLinkedQueue<>();
@@ -74,8 +91,8 @@ public final class TestMetricsServletFilter {
     @Test
     public final void testServletMetricFilterResponseSize() throws ServletException, IOException {
 
-        final Filter servletMetricFilter = new MetricsServletFilter();
-        servletMetricFilter.init(mock(FilterConfig.class));
+        final Filter metricsServletFilter = new MetricsServletFilter();
+        metricsServletFilter.init(mock(FilterConfig.class));
 
         final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
@@ -84,46 +101,33 @@ public final class TestMetricsServletFilter {
         final PrintWriter printWriter = new PrintWriter(stringWriter);
         when(servletResponse.getWriter()).thenReturn(printWriter);
 
-        final ServletOutputStream servletOutputStream = new ServletOutputStream() {
-            @Override
-            public boolean isReady() {
-                throw new UnsupportedOperationException();
-            }
+        final ServletOutputStream servletOutputStream = mock(ServletOutputStream.class);
 
-            @Override
-            public void setWriteListener(WriteListener writeListener) {
-                throw new UnsupportedOperationException();
-            }
+        doAnswer((invocation) -> {
+            stringWriter.write(invocation.getArgument(0, Integer.class));
+            return null; 
+        }).when(servletOutputStream).write(any(Integer.class));
 
-            @Override
-            public void write(int b) throws IOException {
-                stringWriter.write(b);
-            }
-        };
         when(servletResponse.getOutputStream()).thenReturn(servletOutputStream);
-        LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
 
+        LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
             try {
                 final FilterChain filterChain = mock(FilterChain.class);
+
                 doAnswer((invocation) -> {
                     final ServletResponse testServletResponse = invocation.getArgument(1, ServletResponse.class);
                     ServletOutputStream responseServletOutputStream = null;
                     PrintWriter responsePrintWriter = null;
 
-                    if (i % 2 == 0) {
-                        responsePrintWriter = testServletResponse.getWriter();
-                    }
-                    else {
-                        responseServletOutputStream = testServletResponse.getOutputStream();
-                    }
+                    // Test half with getWriter() and half with getOutputStream().
+                    final boolean testWriter = (i % 2 == 0);
 
                     for (long j = 0; j < i; j++) {
 
-                        if (responsePrintWriter != null) {
-                            responsePrintWriter.write("b");
-                        }
-                        else {
-                            responseServletOutputStream.print("b");
+                        if (testWriter) {
+                            testServletResponse.getWriter().write("b");
+                        } else {
+                            testServletResponse.getOutputStream().print("b");
                         }
                     }
 
@@ -131,7 +135,7 @@ public final class TestMetricsServletFilter {
                     return null;
                 }).when(filterChain).doFilter(any(ServletRequest.class), any(ServletResponse.class));
 
-                servletMetricFilter.doFilter(servletRequest, servletResponse, filterChain);
+                metricsServletFilter.doFilter(servletRequest, servletResponse, filterChain);
             } catch (IOException | ServletException e) {
                 throw new RuntimeException(e);
             }
@@ -144,26 +148,28 @@ public final class TestMetricsServletFilter {
         when(servletRequest.getServletPath()).thenReturn(MetricsServletFilter.METRICS_JSP_PAGE);
 
         final Map<String, Object> requestAttrs = new HashMap<>();
+
         when(servletRequest.getAttribute(any(String.class))).thenAnswer((invocation) -> {
             return requestAttrs.get(invocation.getArgument(0, String.class));
         });
+
         doAnswer((invocation) -> {
             requestAttrs.put(invocation.getArgument(0, String.class), invocation.getArgument(1, Object.class));
             return null;
         }).when(servletRequest).setAttribute(any(String.class), any(Object.class));
 
         final FilterChain filterChain = mock(FilterChain.class);
-        servletMetricFilter.doFilter(servletRequest, servletResponse, filterChain);
+        metricsServletFilter.doFilter(servletRequest, servletResponse, filterChain);
 
         Assert.assertEquals(minimumResponseSize,
                 servletRequest.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_SIZE));
         Assert.assertEquals(TOTAL_REQUESTS_TO_SEND,
                 servletRequest.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_SIZE));
-        Assert.assertEquals(LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).asDoubleStream().average()
-                .getAsDouble(),
+        Assert.assertEquals(
+                LongStream.rangeClosed(minimumResponseSize, TOTAL_REQUESTS_TO_SEND).asDoubleStream().average().getAsDouble(),
                 servletRequest.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_SIZE));
         Assert.assertTrue(stringWriter.toString().length() > TOTAL_REQUESTS_TO_SEND);
 
-        servletMetricFilter.destroy();
+        metricsServletFilter.destroy();
     }
 }

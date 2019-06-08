@@ -1,7 +1,25 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * The MIT License
+ *
+ * Copyright 2019 Kyle Stiemann.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 package com.github.stiemannkj1.servlet.filter.example;
 
@@ -16,7 +34,7 @@ import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
  *
- * @author kyle
+ * @author Kyle Stiemann
  */
 final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWrapper {
 
@@ -33,8 +51,7 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
 
         if (getOutputStreamCalled) {
             responseSizeServletOutputStreamWrapper.flush();
-        }
-        else if (responseSizePrintWriter != null) {
+        } else if (responseSizePrintWriter != null) {
             responseSizePrintWriter.flush();
         }
     }
@@ -48,7 +65,7 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
 
         if (responseSizeServletOutputStreamWrapper == null) {
             responseSizeServletOutputStreamWrapper =
-                new ResponseSizeServletOutputStreamWrapper(super.getOutputStream());
+                    new ResponseSizeServletOutputStreamWrapper(super.getOutputStream());
             getOutputStreamCalled = true;
         }
 
@@ -56,7 +73,7 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
     }
 
     /**
-     * @return the response size in bytes. 
+     * @return the response size in bytes.
      */
     public long getResponseSize() {
 
@@ -75,14 +92,16 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
         }
 
         if (responseSizePrintWriter == null) {
-            responseSizeServletOutputStreamWrapper = new ResponseSizeServletOutputStreamWrapper(super.getOutputStream());
+            responseSizeServletOutputStreamWrapper =
+                    new ResponseSizeServletOutputStreamWrapper(super.getOutputStream());
             String characterEncoding = getResponse().getCharacterEncoding();
 
             if (characterEncoding == null) {
                 characterEncoding = StandardCharsets.UTF_8.toString();
             }
 
-            responseSizePrintWriter = new AutoFlushingPrintWriter(responseSizeServletOutputStreamWrapper, characterEncoding);
+            responseSizePrintWriter =
+                    new AutoFlushingPrintWriter(responseSizeServletOutputStreamWrapper, characterEncoding);
         }
 
         return responseSizePrintWriter;
@@ -105,7 +124,7 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
         responseSizeServletOutputStreamWrapper = null;
         getOutputStreamCalled = false;
     }
-    
+
     private static final class AutoFlushingPrintWriter extends PrintWriter {
 
         public AutoFlushingPrintWriter(ServletOutputStream servletOutputStream, String characterEncoding)

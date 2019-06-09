@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.github.stiemannkj1</groupId>
-        <artifactId>servlet-filter-example-parent</artifactId>
+        <artifactId>servlet-filter-example</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -168,7 +168,7 @@
                         <dependencies>
                             <dependency>
                                 <groupId>${project.groupId}</groupId>
-                                <artifactId>servlet-filter-example</artifactId>
+                                <artifactId>metrics-filter</artifactId>
                                 <version>${project.version}</version>
                             </dependency>
                         </dependencies>
@@ -214,7 +214,7 @@
             <dependencies>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
-                    <artifactId>servlet-filter-example</artifactId>
+                    <artifactId>metrics-filter</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>
@@ -263,7 +263,7 @@
             <dependencies>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
-                    <artifactId>servlet-filter-example</artifactId>
+                    <artifactId>metrics-filter</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>
@@ -306,7 +306,7 @@
             <dependencies>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
-                    <artifactId>servlet-filter-example</artifactId>
+                    <artifactId>metrics-filter</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>

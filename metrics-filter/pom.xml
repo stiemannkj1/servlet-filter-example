@@ -6,12 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.github.stiemannkj1</groupId>
-        <artifactId>servlet-filter-example-parent</artifactId>
+        <artifactId>servlet-filter-example</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <groupId>com.github.stiemannkj1</groupId>
-    <artifactId>servlet-filter-example</artifactId>
+    <artifactId>metrics-filter</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 

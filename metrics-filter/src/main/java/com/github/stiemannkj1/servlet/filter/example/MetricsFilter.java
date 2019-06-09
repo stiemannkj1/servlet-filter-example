@@ -24,9 +24,11 @@
 package com.github.stiemannkj1.servlet.filter.example;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,8 +49,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public final class MetricsFilter implements Filter {
 
-    static final String UNIQUE_RESPONSE_ID =
-            MetricsFilter.class.getName() + ".UNIQUE_RESPONSE_ID";
+    static final String UNIQUE_RESPONSE_ID = MetricsFilter.class.getName() + ".UNIQUE_RESPONSE_ID";
     static final String MINIMUM_RESPONSE_SIZE = "minimumResponseSize";
     static final String MAXIMUM_RESPONSE_SIZE = "maximumResponseSize";
     static final String AVERAGE_RESPONSE_SIZE = "averageResponseSize";
@@ -58,32 +59,28 @@ public final class MetricsFilter implements Filter {
     static final String RESPONSE_METRICS = "responseMetrics";
     static final String METRICS_JSP_PAGE = "/com_github_stiemannkj1_servlet_filter_example_Metrics.jsp";
 
-    public static final class SpecificResponseMetrics {
-
-        private final long responseSize;
-        private final long responseTime;
-
-        public SpecificResponseMetrics(long responseSize, long responseTime) {
-            this.responseSize = responseSize;
-            this.responseTime = responseTime;
-        }
-
-        public long getResponseSize() {
-            return responseSize;
-        }
-
-        public long getResponseTime() {
-            return responseTime;
-        }
-    }
-
     private enum Metric {
-        RESPONSE_SIZE,
-        RESPONSE_TIME
+        RESPONSE_SIZE(0),
+        RESPONSE_TIME(1);
+
+        private final int index;
+
+        private Metric(int index) {
+            this.index = index;
+        }
+
+        private int getIndex() {
+            return index;
+        }
     }
 
     private final AtomicLong uniqueResponseId = new AtomicLong();
-    private final ConcurrentMap<Long, SpecificResponseMetrics> responseMetrics = new ConcurrentHashMap<>();
+
+    // Although we could use a more descriptive custom inner class in place of List<Long> (which contains responseSize
+    // and responseTime), the class would need to be public to be accessed from EL in 
+    // com_github_stiemannkj1_servlet_filter_example_Metrics.jsp. To avoid introducing unnecessary public API, use an
+    // unmodifiable List<Long> for now.
+    private final ConcurrentMap<Long, List<Long>> responseMetrics = new ConcurrentHashMap<>();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -99,8 +96,8 @@ public final class MetricsFilter implements Filter {
         final String servletPath = httpServletRequest.getServletPath();
 
         if (servletPath != null && servletPath.equals(METRICS_JSP_PAGE)) {
-            Map<Long, SpecificResponseMetrics> metrics = Collections.unmodifiableMap(new HashMap<>(responseMetrics));
-            Collection<SpecificResponseMetrics> metricsCollection = metrics.values();
+            Map<Long, List<Long>> metrics = Collections.unmodifiableMap(new HashMap<>(responseMetrics));
+            Collection<List<Long>> metricsCollection = metrics.values();
             setMetricsAttributes(Metric.RESPONSE_SIZE, httpServletRequest, metricsCollection);
             setMetricsAttributes(Metric.RESPONSE_TIME, httpServletRequest, metricsCollection);
             httpServletRequest.setAttribute(RESPONSE_METRICS, metrics);
@@ -108,12 +105,12 @@ public final class MetricsFilter implements Filter {
         } else {
             final ResponseSizeHttpServletResponseWrapper httpServletResponse =
                     new ResponseSizeHttpServletResponseWrapper((HttpServletResponse) response);
-            final long uniqueResponseId = this.uniqueResponseId.getAndIncrement();
-            httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, Long.toString(uniqueResponseId));
+            final long currentUniqueResponseId = uniqueResponseId.getAndIncrement();
+            httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, Long.toString(currentUniqueResponseId));
             long startTime = System.nanoTime();
             chain.doFilter(httpServletRequest, httpServletResponse);
-            responseMetrics.put(uniqueResponseId, new SpecificResponseMetrics(httpServletResponse.getResponseSize(),
-                    System.nanoTime() - startTime));
+            responseMetrics.put(currentUniqueResponseId,
+                    unmodifiableList(httpServletResponse.getResponseSize(), (System.nanoTime() - startTime)));
         }
     }
 
@@ -124,7 +121,7 @@ public final class MetricsFilter implements Filter {
     }
 
     private void setMetricsAttributes(Metric metric, HttpServletRequest httpServletRequest,
-            Collection<SpecificResponseMetrics> metrics) {
+            Collection<List<Long>> metrics) {
 
         String minAttrName;
         String maxAttrName;
@@ -147,11 +144,7 @@ public final class MetricsFilter implements Filter {
         if (!metrics.isEmpty()) {
             final LongSummaryStatistics stats =
                     metrics.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {
-                        if (metric.equals(Metric.RESPONSE_SIZE)) {
-                            return specificResponseMetrics.responseSize;
-                        } else {
-                            return specificResponseMetrics.responseTime;
-                        }
+                        return specificResponseMetrics.get(metric.getIndex());
                     }));
 
             min = stats.getMin();
@@ -162,5 +155,9 @@ public final class MetricsFilter implements Filter {
         httpServletRequest.setAttribute(minAttrName, min);
         httpServletRequest.setAttribute(maxAttrName, max);
         httpServletRequest.setAttribute(averageAttrName, average);
+    }
+
+    private static <T> List<T> unmodifiableList(T... ts) {
+        return Collections.unmodifiableList(Arrays.asList(ts));
     }
 }

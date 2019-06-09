@@ -63,8 +63,8 @@ THE SOFTWARE.
                 <c:forEach items="${responseMetrics}" var="responseInfo">
                     <tr>
                         <td align="right">${responseInfo.key}</td>
-                        <td align="right">${responseInfo.value.responseSize}</td>
-                        <td align="right">${responseInfo.value.responseTime}</td>
+                        <td align="right">${responseInfo.value.get(0)}</td>
+                        <td align="right">${responseInfo.value.get(1)}</td>
                     </tr>
                 </c:forEach>
             </tbody>

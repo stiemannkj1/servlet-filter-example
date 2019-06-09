@@ -81,6 +81,14 @@ To run the test web application in Tomcat 7:
 (cd test-web-app/ && mvn org.apache.tomcat.maven:tomcat7-maven-plugin:2.2:run)
 ```
 
+If you want to see how to use Maven plugins to run a WAR for integration tests, take a look at the following profiles
+in `test-web-app/pom.xml`: 
+
+- [`tomcat`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L136-L178)
+- [`glassfish`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L179-L221)
+- [`jetty`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L222-L270)
+- [`wildfly`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L271-L313)
+
 ### See Also:
 
 - [Spring's

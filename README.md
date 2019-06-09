@@ -80,3 +80,10 @@ To run the test web application in Tomcat 7:
 ```
 (cd test-web-app/ && mvn org.apache.tomcat.maven:tomcat7-maven-plugin:2.2:run)
 ```
+
+### See Also:
+
+- [Spring's
+`ContentCachingResponseWrapper`](https://github.com/spring-projects/spring-framework/blob/dc6f63f/spring-web/src/main/java/org/springframework/web/util/ContentCachingResponseWrapper.java)
+- [How to read and copy the HTTP servlet response output stream content for
+logging](https://stackoverflow.com/questions/8933054/how-to-read-and-copy-the-http-servlet-response-output-stream-content-for-logging#8972088)

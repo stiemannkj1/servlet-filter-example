@@ -66,7 +66,7 @@ mvn clean install && (cd test-web-app/ && mvn clean verify -P jetty)
 To build and test the project on WildFly 16.0.0.Final, run:
 
 ```
-mvn clean install-P wildfly
+mvn clean install -P wildfly
 ```
 
 ## Running The Test Web App

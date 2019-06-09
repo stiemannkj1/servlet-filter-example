@@ -24,9 +24,13 @@
 package com.github.stiemannkj1.servlet.filter.example;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LongSummaryStatistics;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import javax.servlet.Filter;
@@ -51,18 +55,41 @@ public final class MetricsServletFilter implements Filter {
     static final String MINIMUM_RESPONSE_TIME = "minimumResponseTime";
     static final String MAXIMUM_RESPONSE_TIME = "maximumResponseTime";
     static final String AVERAGE_RESPONSE_TIME = "averageResponseTime";
+    static final String RESPONSE_METRICS = "responseMetrics";
     static final String METRICS_JSP_PAGE =
             "/" + MetricsServletFilter.class.getName().replace(".", "_") + ".jsp";
 
+    public static final class SpecificResponseMetrics {
+
+        private final long responseSize;
+        private final long responseTime;
+
+        public SpecificResponseMetrics(long responseSize, long responseTime) {
+            this.responseSize = responseSize;
+            this.responseTime = responseTime;
+        }
+
+        public long getResponseSize() {
+            return responseSize;
+        }
+
+        public long getResponseTime() {
+            return responseTime;
+        }
+    }
+
+    private enum Metric {
+        RESPONSE_SIZE,
+        RESPONSE_TIME
+    }
+
     private final AtomicLong uniqueResponseId = new AtomicLong();
-    private final ConcurrentLinkedQueue<Long> responseTimes = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<Long> responseSizes = new ConcurrentLinkedQueue<>();
+    private final ConcurrentMap<Long, SpecificResponseMetrics> responseMetrics = new ConcurrentHashMap<>();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         uniqueResponseId.set(0);
-        responseSizes.clear();
-        responseTimes.clear();
+        responseMetrics.clear();
     }
 
     @Override
@@ -73,37 +100,68 @@ public final class MetricsServletFilter implements Filter {
         final String servletPath = httpServletRequest.getServletPath();
 
         if (servletPath != null && servletPath.equals(METRICS_JSP_PAGE)) {
-
-            setMetricsAttributes(httpServletRequest, responseSizes, MAXIMUM_RESPONSE_SIZE, MINIMUM_RESPONSE_SIZE,
-                    AVERAGE_RESPONSE_SIZE);
-            setMetricsAttributes(httpServletRequest, responseTimes, MAXIMUM_RESPONSE_TIME, MINIMUM_RESPONSE_TIME,
-                    AVERAGE_RESPONSE_TIME);
+            Map<Long, SpecificResponseMetrics> metrics = Collections.unmodifiableMap(new HashMap<>(responseMetrics));
+            Collection<SpecificResponseMetrics> metricsCollection = metrics.values();
+            setMetricsAttributes(Metric.RESPONSE_SIZE, httpServletRequest, metricsCollection);
+            setMetricsAttributes(Metric.RESPONSE_TIME, httpServletRequest, metricsCollection);
+            httpServletRequest.setAttribute(RESPONSE_METRICS, metrics);
             chain.doFilter(httpServletRequest, response);
         } else {
-
             final ResponseSizeHttpServletResponseWrapper httpServletResponse =
                     new ResponseSizeHttpServletResponseWrapper((HttpServletResponse) response);
-            httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, Long.toString(uniqueResponseId.getAndIncrement()));
+            final long uniqueResponseId = this.uniqueResponseId.getAndIncrement();
+            httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, Long.toString(uniqueResponseId));
             long startTime = System.nanoTime();
             chain.doFilter(httpServletRequest, httpServletResponse);
-            responseTimes.add(System.nanoTime() - startTime);
-            responseSizes.add(httpServletResponse.getResponseSize());
+            responseMetrics.put(uniqueResponseId, new SpecificResponseMetrics(httpServletResponse.getResponseSize(),
+                    System.nanoTime() - startTime));
         }
     }
 
     @Override
     public void destroy() {
         uniqueResponseId.set(0);
-        responseSizes.clear();
-        responseTimes.clear();
+        responseMetrics.clear();
     }
 
-    private void setMetricsAttributes(HttpServletRequest httpServletRequest, ConcurrentLinkedQueue<Long> metrics,
-            String maxAttrName, String minAttrName, String averageAttrName) {
-        final LongSummaryStatistics stats =
-                new ArrayList<>(metrics).stream().collect(Collectors.summarizingLong(Long::longValue));
-        httpServletRequest.setAttribute(maxAttrName, stats.getMax());
-        httpServletRequest.setAttribute(minAttrName, stats.getMin());
-        httpServletRequest.setAttribute(averageAttrName, stats.getAverage());
+    private void setMetricsAttributes(Metric metric, HttpServletRequest httpServletRequest,
+            Collection<SpecificResponseMetrics> metrics) {
+
+        String minAttrName;
+        String maxAttrName;
+        String averageAttrName;
+
+        if (metric.equals(Metric.RESPONSE_SIZE)) {
+            minAttrName = MINIMUM_RESPONSE_SIZE;
+            maxAttrName = MAXIMUM_RESPONSE_SIZE;
+            averageAttrName = AVERAGE_RESPONSE_SIZE;
+        } else {
+            minAttrName = MINIMUM_RESPONSE_TIME;
+            maxAttrName = MAXIMUM_RESPONSE_TIME;
+            averageAttrName = AVERAGE_RESPONSE_TIME;
+        }
+
+        long min = 0;
+        long max = 0;
+        double average = 0.0;
+
+        if (!metrics.isEmpty()) {
+            final LongSummaryStatistics stats =
+                    metrics.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {
+                        if (metric.equals(Metric.RESPONSE_SIZE)) {
+                            return specificResponseMetrics.responseSize;
+                        } else {
+                            return specificResponseMetrics.responseTime;
+                        }
+                    }));
+
+            min = stats.getMin();
+            max = stats.getMax();
+            average = stats.getAverage();
+        }
+
+        httpServletRequest.setAttribute(minAttrName, min);
+        httpServletRequest.setAttribute(maxAttrName, max);
+        httpServletRequest.setAttribute(averageAttrName, average);
     }
 }

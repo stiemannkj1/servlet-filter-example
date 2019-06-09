@@ -31,9 +31,13 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LongSummaryStatistics;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,12 +59,24 @@ public final class MetricsFilterIT {
     private static final Pattern GET_AVERAGE_RESPONSE_SIZE = Pattern.compile(getMetricRegex("averageResponseSize"));
     private static final Pattern GET_MINIMUM_RESPONSE_TIME = Pattern.compile(getMetricRegex("minimumResponseTime"));
     private static final Pattern GET_MAXIMUM_RESPONSE_TIME = Pattern.compile(getMetricRegex("maximumResponseTime"));
-    private static final Pattern GET_AVERAGE_RESPONSE_TIME = Pattern.compile(getMetricRegex("averageResponseSize"));
+    private static final Pattern GET_AVERAGE_RESPONSE_TIME = Pattern.compile(getMetricRegex("averageResponseTime"));
+    private static final Pattern GET_SPECIFIC_RESPONSE_METRICS =
+            Pattern.compile("<td[^>]*>\\s*([0-9]+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>");
     private static final String TEST_WEBAPP_BASE_URL =
             "http://localhost:" + System.getProperty("it.test.server.port", "8080") + "/test-web-app";
 
     private static String getMetricRegex(String id) {
         return "id=\"" + id + "\"[^>]*>([^<]+)";
+    }
+
+    private static final class Metrics {
+        private final long responseSize;
+        private final long responseTime;
+
+        public Metrics(long responseSize, long responseTime) {
+            this.responseSize = responseSize;
+            this.responseTime = responseTime;
+        }
     }
 
     @Test
@@ -86,17 +102,48 @@ public final class MetricsFilterIT {
 
         final String metricsHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" +
                 "com_github_stiemannkj1_servlet_filter_example_MetricsServletFilter.jsp");
-        Assert.assertTrue(getMetric(GET_MINIMUM_RESPONSE_SIZE, metricsHtml) > 0);
-        Assert.assertTrue(getMetric(GET_MAXIMUM_RESPONSE_SIZE, metricsHtml) > 0);
-        Assert.assertTrue(getMetric(GET_AVERAGE_RESPONSE_SIZE, metricsHtml) > 0);
-        Assert.assertTrue(getMetric(GET_MINIMUM_RESPONSE_TIME, metricsHtml) > 0);
-        Assert.assertTrue(getMetric(GET_MAXIMUM_RESPONSE_TIME, metricsHtml) > 0);
-        Assert.assertTrue(getMetric(GET_AVERAGE_RESPONSE_TIME, metricsHtml) > 0);
+
+        final Map<Long, Metrics> metrics = new HashMap<>();
+        final Matcher specificMetricsMatcher = GET_SPECIFIC_RESPONSE_METRICS.matcher(metricsHtml);
+
+        while (specificMetricsMatcher.find()) {
+
+            // Assert that no duplicate ids exist by checking the return value of Map.put().
+            Assert.assertNull(metrics.put(Long.parseLong(specificMetricsMatcher.group(1)),
+                    new Metrics(Long.parseLong(specificMetricsMatcher.group(2)),
+                        Long.parseLong(specificMetricsMatcher.group(3)))));
+        }
+
+        Assert.assertEquals(TOTAL_REQUESTS_TO_SEND + 1, metrics.size());
+        final Collection<Metrics> metricsCollection = metrics.values();
+        final LongSummaryStatistics responseSizeStats =
+                metricsCollection.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {
+                    return specificResponseMetrics.responseSize;
+                }));
+
+        Assert.assertEquals(getLongMetric(GET_MINIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMin());
+        Assert.assertEquals(getLongMetric(GET_MAXIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMax());
+        Assert.assertEquals(getDoubleMetric(GET_AVERAGE_RESPONSE_SIZE, metricsHtml), responseSizeStats.getAverage(),
+                0.1);
+
+        final LongSummaryStatistics responseTimeStats =
+                metricsCollection.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {
+                    return specificResponseMetrics.responseTime;
+                }));
+
+        Assert.assertEquals(getLongMetric(GET_MINIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMin());
+        Assert.assertEquals(getLongMetric(GET_MAXIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMax());
+        Assert.assertEquals(getDoubleMetric(GET_AVERAGE_RESPONSE_TIME, metricsHtml), responseTimeStats.getAverage(),
+                0.1);
     }
 
     private void assertPageRendered(String page) {
         final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + page);
         Assert.assertTrue(pageHtmlResponse.contains(page) && pageHtmlResponse.contains("Hello World!"));
+    }
+
+    private double getDoubleMetric(Pattern getMetricPattern, String metricsHtml) {
+        return Double.parseDouble(getMetric(getMetricPattern, metricsHtml));
     }
 
     private String getHtmlResponse(String urlString) throws UncheckedIOException {
@@ -117,9 +164,13 @@ public final class MetricsFilterIT {
         }
     }
 
-    private double getMetric(Pattern getMetricPattern, String metricsHtml) {
+    private long getLongMetric(Pattern getMetricPattern, String metricsHtml) {
+        return Long.parseLong(getMetric(getMetricPattern, metricsHtml));
+    }
+
+    private String getMetric(Pattern getMetricPattern, String metricsHtml) {
         final Matcher matcher = getMetricPattern.matcher(metricsHtml);
         matcher.find();
-        return Double.parseDouble(matcher.group(1));
+        return matcher.group(1);
     }
 }

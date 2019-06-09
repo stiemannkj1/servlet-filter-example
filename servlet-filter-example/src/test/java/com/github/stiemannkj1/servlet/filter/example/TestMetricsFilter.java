@@ -85,6 +85,11 @@ public final class TestMetricsFilter {
             Assert.assertNotEquals(sortedResponseIds.get(i), sortedResponseIds.get(i + 1));
         }
 
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+        Assert.assertEquals(sortedResponseIds.size(),
+                ((Map) request.getAttribute(MetricsServletFilter.RESPONSE_METRICS)).size());
+
         metricsFilter.destroy();
     }
 
@@ -93,6 +98,13 @@ public final class TestMetricsFilter {
 
         final Filter metricsFilter = new MetricsServletFilter();
         metricsFilter.init(mock(FilterConfig.class));
+
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+        Assert.assertTrue(0L == (Long) request.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_SIZE));
+        Assert.assertTrue(0L == (Long) request.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_SIZE));
+        Assert.assertTrue(0.0 == (Double) request.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_SIZE));
+        Assert.assertEquals(0, ((Map) request.getAttribute(MetricsServletFilter.RESPONSE_METRICS)).size());
         testMetricsFilterResponseSize(metricsFilter);
 
         metricsFilter.destroy();
@@ -103,9 +115,16 @@ public final class TestMetricsFilter {
 
         final Filter metricsFilter = new MetricsServletFilter();
         metricsFilter.init(mock(FilterConfig.class));
+
+        HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+        Assert.assertTrue(0L == (Long) request.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_TIME));
+        Assert.assertTrue(0L == (Long) request.getAttribute(MetricsServletFilter.MAXIMUM_RESPONSE_TIME));
+        Assert.assertTrue(0.0 == (Double) request.getAttribute(MetricsServletFilter.AVERAGE_RESPONSE_TIME));
+        Assert.assertEquals(0, ((Map) request.getAttribute(MetricsServletFilter.RESPONSE_METRICS)).size());
         testMetricsFilterResponseSize(metricsFilter);
 
-        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);
 
         final Long minimumResponseTime = (Long) request.getAttribute(MetricsServletFilter.MINIMUM_RESPONSE_TIME);

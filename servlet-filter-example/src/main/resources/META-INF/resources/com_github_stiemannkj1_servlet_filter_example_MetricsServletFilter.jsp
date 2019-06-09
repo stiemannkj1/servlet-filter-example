@@ -22,12 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8" session="false" %>
-<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Metrics</title>
+        <style>
+            table {
+                border-collapse: collapse;
+            }
+
+            table, th, td {
+                border: 1px solid black;
+            }
+        </style>
     </head>
     <body>
         <h1>Metrics</h1>
@@ -41,5 +50,24 @@ THE SOFTWARE.
             <li><strong>Maximum Servlet Response Time (in nanoseconds):</strong> <span id="maximumResponseTime">${maximumResponseTime}</span></li>
             <li><strong>Average Servlet Response Time (in nanoseconds):</strong> <span id="averageResponseTime">${averageResponseTime}</span></li>
         </ul>
+        <table>
+            <caption>Historical Response Data</caption>
+            <thead>
+                <tr>
+                    <th>Response Id</th>
+                    <th>Response Size (in bytes)</th>
+                    <th>Servlet Response Time (in nanoseconds)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <c:forEach items="${responseMetrics}" var="responseInfo">
+                    <tr>
+                        <td align="right">${responseInfo.key}</td>
+                        <td align="right">${responseInfo.value.responseSize}</td>
+                        <td align="right">${responseInfo.value.responseTime}</td>
+                    </tr>
+                </c:forEach>
+            </tbody>
+        </table>
     </body>
 </html>

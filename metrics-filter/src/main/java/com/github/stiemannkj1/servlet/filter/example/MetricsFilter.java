@@ -50,27 +50,48 @@ import javax.servlet.http.HttpServletResponse;
 public final class MetricsFilter implements Filter {
 
     static final String UNIQUE_RESPONSE_ID = MetricsFilter.class.getName() + ".UNIQUE_RESPONSE_ID";
-    static final String MINIMUM_RESPONSE_SIZE = "minimumResponseSize";
-    static final String MAXIMUM_RESPONSE_SIZE = "maximumResponseSize";
-    static final String AVERAGE_RESPONSE_SIZE = "averageResponseSize";
-    static final String MINIMUM_RESPONSE_TIME = "minimumResponseTime";
-    static final String MAXIMUM_RESPONSE_TIME = "maximumResponseTime";
-    static final String AVERAGE_RESPONSE_TIME = "averageResponseTime";
     static final String RESPONSE_METRICS = "responseMetrics";
     static final String METRICS_JSP_PAGE = "/com_github_stiemannkj1_servlet_filter_example_Metrics.jsp";
 
-    private enum Metric {
-        RESPONSE_SIZE(0),
-        RESPONSE_TIME(1);
+    enum Metric {
+        RESPONSE_SIZE(0, "minimumResponseSize", "maximumResponseSize", "averageResponseSize"),
+        RESPONSE_TIME(1, "minimumResponseTime", "maximumResponseTime", "averageResponseTime");
 
         private final int index;
+        private final String minKey;
+        private final String maxKey;
+        private final String averageKey;
 
-        private Metric(int index) {
+        private Metric(int index, String minKey, String maxKey, String averageKey) {
             this.index = index;
+            this.minKey = minKey;
+            this.maxKey = maxKey;
+            this.averageKey = averageKey;
         }
 
         private int getIndex() {
             return index;
+        }
+
+        /**
+         * @return the request attribute and client id for the minimum value for the metric.
+         */
+        public String getMinId() {
+            return minKey;
+        }
+
+        /**
+         * @return the request attribute and client id for the maximum value for the metric.
+         */
+        public String getMaxId() {
+            return maxKey;
+        }
+
+        /**
+         * @return the request attribute and client id for the average value for the metric.
+         */
+        public String getAverageId() {
+            return averageKey;
         }
     }
 
@@ -123,20 +144,6 @@ public final class MetricsFilter implements Filter {
     private void setMetricsAttributes(Metric metric, HttpServletRequest httpServletRequest,
             Collection<List<Long>> metrics) {
 
-        String minAttrName;
-        String maxAttrName;
-        String averageAttrName;
-
-        if (metric.equals(Metric.RESPONSE_SIZE)) {
-            minAttrName = MINIMUM_RESPONSE_SIZE;
-            maxAttrName = MAXIMUM_RESPONSE_SIZE;
-            averageAttrName = AVERAGE_RESPONSE_SIZE;
-        } else {
-            minAttrName = MINIMUM_RESPONSE_TIME;
-            maxAttrName = MAXIMUM_RESPONSE_TIME;
-            averageAttrName = AVERAGE_RESPONSE_TIME;
-        }
-
         long min = 0;
         long max = 0;
         double average = 0.0;
@@ -152,9 +159,9 @@ public final class MetricsFilter implements Filter {
             average = stats.getAverage();
         }
 
-        httpServletRequest.setAttribute(minAttrName, min);
-        httpServletRequest.setAttribute(maxAttrName, max);
-        httpServletRequest.setAttribute(averageAttrName, average);
+        httpServletRequest.setAttribute(metric.getMinId(), min);
+        httpServletRequest.setAttribute(metric.getMaxId(), max);
+        httpServletRequest.setAttribute(metric.getAverageId(), average);
     }
 
     private static <T> List<T> unmodifiableList(T... ts) {

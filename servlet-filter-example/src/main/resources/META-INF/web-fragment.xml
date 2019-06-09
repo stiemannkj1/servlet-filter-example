@@ -27,18 +27,18 @@ THE SOFTWARE.
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-fragment_3_0.xsd"
     version="3.0">
-    <name>com_github_stiemannkj1_servlet_filter_example_MetricsServletFilter</name>
+    <name>com_github_stiemannkj1_servlet_filter_example_Metrics</name>
     <ordering>
         <after>
             <others />
         </after>
     </ordering>
     <filter>
-        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsServletFilter</filter-name>
-        <filter-class>com.github.stiemannkj1.servlet.filter.example.MetricsServletFilter</filter-class>
+        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-name>
+        <filter-class>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-class>
     </filter>
     <filter-mapping>
-        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsServletFilter</filter-name>
+        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-name>
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 </web-fragment>

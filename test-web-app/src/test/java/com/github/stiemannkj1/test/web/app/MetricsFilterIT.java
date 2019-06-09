@@ -70,6 +70,7 @@ public final class MetricsFilterIT {
     }
 
     private static final class Metrics {
+
         private final long responseSize;
         private final long responseTime;
 
@@ -101,7 +102,7 @@ public final class MetricsFilterIT {
         });
 
         final String metricsHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" +
-                "com_github_stiemannkj1_servlet_filter_example_MetricsServletFilter.jsp");
+                "com_github_stiemannkj1_servlet_filter_example_Metrics.jsp");
 
         final Map<Long, Metrics> metrics = new HashMap<>();
         final Matcher specificMetricsMatcher = GET_SPECIFIC_RESPONSE_METRICS.matcher(metricsHtml);
@@ -111,7 +112,7 @@ public final class MetricsFilterIT {
             // Assert that no duplicate ids exist by checking the return value of Map.put().
             Assert.assertNull(metrics.put(Long.parseLong(specificMetricsMatcher.group(1)),
                     new Metrics(Long.parseLong(specificMetricsMatcher.group(2)),
-                        Long.parseLong(specificMetricsMatcher.group(3)))));
+                            Long.parseLong(specificMetricsMatcher.group(3)))));
         }
 
         Assert.assertEquals(TOTAL_REQUESTS_TO_SEND + 1, metrics.size());

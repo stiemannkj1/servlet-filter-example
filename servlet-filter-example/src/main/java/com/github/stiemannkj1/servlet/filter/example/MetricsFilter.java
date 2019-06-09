@@ -45,10 +45,10 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * @author Kyle Stiemann
  */
-public final class MetricsServletFilter implements Filter {
+public final class MetricsFilter implements Filter {
 
     static final String UNIQUE_RESPONSE_ID =
-            MetricsServletFilter.class.getName() + ".UNIQUE_RESPONSE_ID";
+            MetricsFilter.class.getName() + ".UNIQUE_RESPONSE_ID";
     static final String MINIMUM_RESPONSE_SIZE = "minimumResponseSize";
     static final String MAXIMUM_RESPONSE_SIZE = "maximumResponseSize";
     static final String AVERAGE_RESPONSE_SIZE = "averageResponseSize";
@@ -56,8 +56,7 @@ public final class MetricsServletFilter implements Filter {
     static final String MAXIMUM_RESPONSE_TIME = "maximumResponseTime";
     static final String AVERAGE_RESPONSE_TIME = "averageResponseTime";
     static final String RESPONSE_METRICS = "responseMetrics";
-    static final String METRICS_JSP_PAGE =
-            "/" + MetricsServletFilter.class.getName().replace(".", "_") + ".jsp";
+    static final String METRICS_JSP_PAGE = "/com_github_stiemannkj1_servlet_filter_example_Metrics.jsp";
 
     public static final class SpecificResponseMetrics {
 

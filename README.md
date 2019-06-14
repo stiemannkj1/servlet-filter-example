@@ -1,16 +1,15 @@
-# `Servlet` `Filter` Example
+# Servlet `Filter` Example
 
 [![Build Status](https://travis-ci.org/stiemannkj1/servlet-filter-example.svg?branch=master)](https://travis-ci.org/stiemannkj1/servlet-filter-example)
 
-This project is an example `Servlet` `Filter` to demonstrate how to create a filter that records request/response data
-and provides additional views. Specifically
+This example Servlet `Filter` demonstrates how to record request/response data and provide additional views. Specifically
 [`MetricsFilter`](metrics-filter/src/main/java/com/github/stiemannkj1/servlet/filter/example/MetricsFilter.java) tracks
-response sizes and times. At any time you can request the metrics page to see the minimum, maximum, and average response
-sizes and times and a list of all response sizes and times by navigating to
+response sizes and times. At any time you can request the metrics page to view the minimum, maximum, and average response
+sizes and times along with a list of all previous response sizes and times by navigating to
 http://localhost:8080/your-app/com_github_stiemannkj1_servlet_filter_example_Metrics.jsp. To use `MetricsFilter` for
 your own project, build it as directed below and include it on the classpath for your WAR; either inside your WAR's
 **`WEB-INF/lib`** directory or in your server's global **`lib/`** directory (such as **`$TOMCAT/lib`**). The easiest way
-to include `MetricsFilter` is to add the following Maven dependency after building the project:
+to include `MetricsFilter` is to add it as a Maven dependency after building this project:
 
 ```
 <dependency>
@@ -20,8 +19,8 @@ to include `MetricsFilter` is to add the following Maven dependency after buildi
 </dependency>
 ```
 
-If you are including **`metrics-filter.jar`** in your application server's global **`lib/`** directory, you'll need to
-include the following in your WAR's **`WEB-INF/lib`** to activate the filter:
+If you are including **`metrics-filter.jar`** in your application server's global **`lib/`** directory, you may need to
+include the following in your WAR's **`WEB-INF/web.xml`** to activate the filter:
 
 ```
 <filter>
@@ -34,7 +33,7 @@ include the following in your WAR's **`WEB-INF/lib`** to activate the filter:
 </filter-mapping>
 ```
 
-This project is provided for example purposes only and should not be used in production projects.
+This filter is provided for example purposes only and should not be used in production.
 
 ## Building/Testing the Project:
 
@@ -72,24 +71,27 @@ mvn clean install -P wildfly
 ## Running The Test Web App
 
 This project includes a test web application that is used for integration testing as mentioned above. The test web
-application can also allow manual testing and interaction with `MetricsFilter`. You must build the project using the
-instructions above before running the test web application.
+application can also be accessed for manual testing and evaluation of `MetricsFilter`. You must build the project
+using the instructions above before running the test web application.
 
-To run the test web application in Tomcat 7:
+To start the test web application in Tomcat 7, run:
 
 ```
 (cd test-web-app/ && mvn org.apache.tomcat.maven:tomcat7-maven-plugin:2.2:run)
 ```
 
-If you want to see how to use Maven plugins to run a WAR for integration tests, take a look at the following profiles
-in `test-web-app/pom.xml`: 
+### Maven Plugin Configuration
 
-- [`tomcat`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L136-L178)
-- [`glassfish`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L179-L221)
-- [`jetty`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L222-L270)
-- [`wildfly`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L271-L313)
+This project takes advantage of several fantastic Maven plugins to run the test web application within the Maven build
+lifecycle for integration testing. The configuration used in **`test-web-app/pom.xml`** can be used as an example for
+your own projects. Click the following links to see example configuration for each plugin:
 
-### See Also:
+- [`tomcat7-maven-plugin`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L136-L178)
+- [`maven-embedded-glassfish-plugin`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L179-L221)
+- [`jetty-maven-plugin`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L222-L270)
+- [`wildfly-maven-plugin`](https://github.com/stiemannkj1/servlet-filter-example/blob/a237583/test-web-app/pom.xml#L271-L313)
+
+### For more Servlet `Filter` examples, take a look at:
 
 - [Spring's
 `ContentCachingResponseWrapper`](https://github.com/spring-projects/spring-framework/blob/dc6f63f/spring-web/src/main/java/org/springframework/web/util/ContentCachingResponseWrapper.java)

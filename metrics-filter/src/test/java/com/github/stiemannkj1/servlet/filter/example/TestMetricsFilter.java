@@ -55,45 +55,13 @@ public final class TestMetricsFilter {
     private static final long TOTAL_REQUESTS_TO_SEND = 100;
 
     @Test
-    public final void testMetricsFilterUniqueId() throws ServletException, IOException {
+    public final void testMetricsFilterUniqueAtomicLongId() throws ServletException, IOException {
+        testMetricsFilterUniqueId(false);
+    }
 
-        final Filter metricsFilter = new MetricsFilter();
-        metricsFilter.init(mock(FilterConfig.class));
-
-        final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
-        final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
-        final ConcurrentLinkedQueue<String> responseIds = new ConcurrentLinkedQueue<>();
-
-        doAnswer((invocation) -> {
-            responseIds.add(invocation.getArgument(1, String.class));
-            return null;
-        }).when(servletResponse).addHeader(eq(MetricsFilter.UNIQUE_RESPONSE_ID), any(String.class));
-
-        final FilterChain filterChain = mock(FilterChain.class);
-
-        LongStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
-            try {
-                metricsFilter.doFilter(servletRequest, servletResponse, filterChain);
-            } catch (IOException | ServletException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        final Set<String> responseIdsSet = new HashSet<String>();
-        final Iterator<String> iterator = responseIds.iterator();
-
-        while (iterator.hasNext()) {
-            final String responseId = iterator.next();
-            Assert.assertTrue("Duplicate response id found: " + responseId, responseIdsSet.add(responseId));
-        }
-
-        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
-        requestMetricsPage(request, metricsFilter);
-        Assert.assertEquals(
-                "The number of response ids found differs from the number of response metrics recorded by MetricsFilter.",
-                responseIdsSet.size(), ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
-
-        metricsFilter.destroy();
+    @Test
+    public final void testMetricsFilterUniqueUUID() throws ServletException, IOException {
+        testMetricsFilterUniqueId(true);
     }
 
     @Test
@@ -105,22 +73,6 @@ public final class TestMetricsFilter {
         testMetricsFilterResponseSize(metricsFilter);
 
         metricsFilter.destroy();
-    }
-
-    private void testMetricsWithNoRequests(Filter metricsFilter, MetricsFilter.Metric metric)
-            throws ServletException, IOException {
-        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
-        requestMetricsPage(request, metricsFilter);
-
-        final String metricName = metric.name().toLowerCase(Locale.ENGLISH).replace("_", " ");
-        Assert.assertEquals("Initial " + metricName + " metric min value did not equal zero.",
-                Long.valueOf(0L), (Long) request.getAttribute(metric.getMinId()));
-        Assert.assertEquals("Initial " + metricName + " metric max value did not equal zero.",
-                Long.valueOf(0L), (Long) request.getAttribute(metric.getMaxId()));
-        Assert.assertEquals("Initial " + metricName + " metric average value did not equal zero.",
-                0.0, (Double) request.getAttribute(metric.getAverageId()), 0.0);
-        Assert.assertEquals("Intial " + metricName + " metrics map contained entries.", 0,
-                ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
     }
 
     @Test
@@ -241,7 +193,69 @@ public final class TestMetricsFilter {
                 request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getMaxId()));
         Assert.assertEquals(
                 "Calculated average response size is not the average of bytes written to all responses.",
-                LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).asDoubleStream().average().getAsDouble(),
+                LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).asDoubleStream().average()
+                        .getAsDouble(),
                 (Double) request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getAverageId()), 0.1);
+    }
+
+    private void testMetricsFilterUniqueId(boolean testUseUUIDUniqueResponseId) throws ServletException,
+            IOException {
+
+        final Filter metricsFilter = new MetricsFilter();
+        final FilterConfig filterConfig = mock(FilterConfig.class);
+        when(filterConfig.getInitParameter(MetricsFilter.USE_UUID_UNIQUE_RESPONSE_ID_KEY))
+                .thenReturn(Boolean.toString(testUseUUIDUniqueResponseId));
+        metricsFilter.init(filterConfig);
+
+        final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+        final HttpServletResponse servletResponse = mock(HttpServletResponse.class);
+        final ConcurrentLinkedQueue<String> responseIds = new ConcurrentLinkedQueue<>();
+
+        doAnswer((invocation) -> {
+            responseIds.add(invocation.getArgument(1, String.class));
+            return null;
+        }).when(servletResponse).addHeader(eq(MetricsFilter.UNIQUE_RESPONSE_ID), any(String.class));
+
+        final FilterChain filterChain = mock(FilterChain.class);
+
+        LongStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
+            try {
+                metricsFilter.doFilter(servletRequest, servletResponse, filterChain);
+            } catch (IOException | ServletException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        final Set<String> responseIdsSet = new HashSet<String>();
+        final Iterator<String> iterator = responseIds.iterator();
+
+        while (iterator.hasNext()) {
+            final String responseId = iterator.next();
+            Assert.assertTrue("Duplicate response id found: " + responseId, responseIdsSet.add(responseId));
+        }
+
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+        Assert.assertEquals(
+                "The number of response ids found differs from the number of response metrics recorded by MetricsFilter.",
+                responseIdsSet.size(), ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
+
+        metricsFilter.destroy();
+    }
+
+    private void testMetricsWithNoRequests(Filter metricsFilter, MetricsFilter.Metric metric)
+            throws ServletException, IOException {
+        final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
+        requestMetricsPage(request, metricsFilter);
+
+        final String metricName = metric.name().toLowerCase(Locale.ENGLISH).replace("_", " ");
+        Assert.assertEquals("Initial " + metricName + " metric min value did not equal zero.",
+                Long.valueOf(0L), (Long) request.getAttribute(metric.getMinId()));
+        Assert.assertEquals("Initial " + metricName + " metric max value did not equal zero.",
+                Long.valueOf(0L), (Long) request.getAttribute(metric.getMaxId()));
+        Assert.assertEquals("Initial " + metricName + " metric average value did not equal zero.",
+                0.0, (Double) request.getAttribute(metric.getAverageId()), 0.0);
+        Assert.assertEquals("Intial " + metricName + " metrics map contained entries.", 0,
+                ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
     }
 }

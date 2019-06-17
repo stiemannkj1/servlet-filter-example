@@ -35,6 +35,22 @@ include the following in your WAR's **`WEB-INF/web.xml`** to activate the filter
 
 This filter is provided for example purposes only and should not be used in production.
 
+## Configuration Options:
+
+By default, `MetricsFilter` uses
+[`AtomicLong`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/atomic/AtomicLong.html) to generate unique
+response ids per `MetricsFilter` instance. However, `MetricsFilter` can instead be configured to use
+[`UUID`](https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html) to generate ids that will be unique across
+multiple instances of `MetricsFilter` (with an extremely small possibility of collisions). Set the following
+`<init-param>` for `MetricsFilter` in your **`web.xml`** to use `UUID` instead of `AtomicLong` to generate response ids:
+
+```
+<init-param>
+    <param-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter.USE_UUID_UNIQUE_RESPONSE_ID</param-name>
+    <param-value>true</param-value>
+</init-param>
+```
+
 ## Building/Testing the Project:
 
 To build and test the project, you must have [Maven 3.3.1+](https://maven.apache.org/download.cgi) and JDK 8+ installed.
@@ -67,6 +83,9 @@ To build and test the project on WildFly 16.0.0.Final, run:
 ```
 mvn clean install -P wildfly
 ```
+
+To build/test with `UUID` instead of `AtomicLong` response ids, add the following command line property:
+`-Duse.uuid.unique.response.id=true`.
 
 ## Running The Test Web App
 

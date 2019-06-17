@@ -45,4 +45,16 @@ THE SOFTWARE.
         <url-pattern>/page5</url-pattern>
         <url-pattern>/page6</url-pattern>
     </servlet-mapping>
+    <filter>
+        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-name>
+        <filter-class>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-class>
+        <init-param>
+            <param-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter.USE_UUID_UNIQUE_RESPONSE_ID</param-name>
+            <param-value>${use.uuid.unique.response.id}</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>com.github.stiemannkj1.servlet.filter.example.MetricsFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
 </web-app>

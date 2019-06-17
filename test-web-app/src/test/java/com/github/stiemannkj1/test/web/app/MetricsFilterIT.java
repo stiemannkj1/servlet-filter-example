@@ -61,7 +61,7 @@ public final class MetricsFilterIT {
     private static final Pattern GET_MAXIMUM_RESPONSE_TIME = Pattern.compile(getMetricRegex("maximumResponseTime"));
     private static final Pattern GET_AVERAGE_RESPONSE_TIME = Pattern.compile(getMetricRegex("averageResponseTime"));
     private static final Pattern GET_SPECIFIC_RESPONSE_METRICS =
-            Pattern.compile("<td[^>]*>\\s*([0-9]+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>");
+            Pattern.compile("<td[^>]*>\\s*(\\S+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>\\s*<td[^>]*>\\s*([0-9]+)\\s*</td>");
     private static final String TEST_WEBAPP_BASE_URL =
             "http://localhost:" + System.getProperty("it.test.server.port", "8080") + "/test-web-app";
 
@@ -104,13 +104,13 @@ public final class MetricsFilterIT {
         final String metricsHtml = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" +
                 "com_github_stiemannkj1_servlet_filter_example_Metrics.jsp");
 
-        final Map<Long, Metrics> metrics = new HashMap<>();
+        final Map<String, Metrics> metrics = new HashMap<>();
         final Matcher specificMetricsMatcher = GET_SPECIFIC_RESPONSE_METRICS.matcher(metricsHtml);
 
         while (specificMetricsMatcher.find()) {
 
             // Assert that no duplicate ids exist by checking the return value of Map.put().
-            final long responseId = Long.parseLong(specificMetricsMatcher.group(1));
+            final String responseId = specificMetricsMatcher.group(1);
             final long responseSize = Long.parseLong(specificMetricsMatcher.group(2));
             final long responseTime = Long.parseLong(specificMetricsMatcher.group(3));
 
@@ -118,7 +118,8 @@ public final class MetricsFilterIT {
                     new Metrics(responseSize, responseTime)));
         }
 
-        Assert.assertEquals(TOTAL_REQUESTS_TO_SEND + 1, metrics.size());
+        Assert.assertEquals("Total number of metrics obtained did not equal the total number of requests sent.",
+                TOTAL_REQUESTS_TO_SEND + 1, metrics.size());
         final Collection<Metrics> metricsCollection = metrics.values();
         final LongSummaryStatistics responseSizeStats =
                 metricsCollection.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {

@@ -17,6 +17,7 @@
     <name>test-web-app</name>
 
     <properties>
+        <use.uuid.unique.response.id>false</use.uuid.unique.response.id>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <it.test.server.port>8080</it.test.server.port>
@@ -75,6 +76,7 @@
                 <version>3.2.2</version>
                 <configuration>
                     <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
                 </configuration>
             </plugin>
             <plugin>

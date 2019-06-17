@@ -37,7 +37,8 @@ public class TestWebAppServlet extends HttpServlet {
             + "</html>";
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException,
+            IOException {
 
         final Date today = new Date();
         final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

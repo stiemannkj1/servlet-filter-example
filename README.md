@@ -15,7 +15,7 @@ to include `MetricsFilter` is to add it as a Maven dependency after building thi
 <dependency>
     <groupId>com.github.stiemannkj1</groupId>
     <artifactId>metrics-filter</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 </dependency>
 ```
 

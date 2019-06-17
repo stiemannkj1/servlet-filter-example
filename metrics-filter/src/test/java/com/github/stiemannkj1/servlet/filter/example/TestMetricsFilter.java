@@ -26,10 +26,12 @@ package com.github.stiemannkj1.servlet.filter.example;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.LongStream;
 import javax.servlet.Filter;
@@ -69,7 +71,7 @@ public final class TestMetricsFilter {
 
         final FilterChain filterChain = mock(FilterChain.class);
 
-        LongStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND + 1).parallel().forEach((i) -> {
+        LongStream.rangeClosed(1, TOTAL_REQUESTS_TO_SEND).parallel().forEach((i) -> {
             try {
                 metricsFilter.doFilter(servletRequest, servletResponse, filterChain);
             } catch (IOException | ServletException e) {
@@ -77,18 +79,19 @@ public final class TestMetricsFilter {
             }
         });
 
-        // Sort all response ids and compare each one with the next to ensure that none are the same.
-        final List<String> sortedResponseIds = new ArrayList<>(responseIds);
-        sortedResponseIds.sort(null);
+        final Set<String> responseIdsSet = new HashSet<String>();
+        final Iterator<String> iterator = responseIds.iterator();
 
-        for (int i = 0; i < sortedResponseIds.size() - 1; i++) {
-            Assert.assertNotEquals(sortedResponseIds.get(i), sortedResponseIds.get(i + 1));
+        while (iterator.hasNext()) {
+            final String responseId = iterator.next();
+            Assert.assertTrue("Duplicate response id found: " + responseId, responseIdsSet.add(responseId));
         }
 
         final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);
-        Assert.assertEquals(sortedResponseIds.size(),
-                ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
+        Assert.assertEquals(
+                "The number of response ids found differs from the number of response metrics recorded by MetricsFilter.",
+                responseIdsSet.size(), ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
 
         metricsFilter.destroy();
     }
@@ -108,10 +111,16 @@ public final class TestMetricsFilter {
             throws ServletException, IOException {
         final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);
-        Assert.assertTrue(0L == (Long) request.getAttribute(metric.getMinId()));
-        Assert.assertTrue(0L == (Long) request.getAttribute(metric.getMaxId()));
-        Assert.assertTrue(0.0 == (Double) request.getAttribute(metric.getAverageId()));
-        Assert.assertEquals(0, ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
+
+        final String metricName = metric.name().toLowerCase(Locale.ENGLISH).replace("_", " ");
+        Assert.assertEquals("Initial " + metricName + " metric min value did not equal zero.",
+                Long.valueOf(0L), (Long) request.getAttribute(metric.getMinId()));
+        Assert.assertEquals("Initial " + metricName + " metric max value did not equal zero.",
+                Long.valueOf(0L), (Long) request.getAttribute(metric.getMaxId()));
+        Assert.assertEquals("Initial " + metricName + " metric average value did not equal zero.",
+                0.0, (Double) request.getAttribute(metric.getAverageId()), 0.0);
+        Assert.assertEquals("Intial " + metricName + " metrics map contained entries.", 0,
+                ((Map) request.getAttribute(MetricsFilter.RESPONSE_METRICS)).size());
     }
 
     @Test
@@ -126,16 +135,18 @@ public final class TestMetricsFilter {
         requestMetricsPage(request, metricsFilter);
 
         final long minimumResponseTime = (Long) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getMinId());
-        Assert.assertTrue(0 < minimumResponseTime);
+        Assert.assertTrue("Minimum response time is zero after requests were filtered by MetricsFilter.",
+                (0 < minimumResponseTime));
 
         final long maximumResponseTime = (Long) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getMaxId());
-        Assert.assertTrue((minimumResponseTime < maximumResponseTime) ||
-                (minimumResponseTime == maximumResponseTime));
+        Assert.assertTrue("Minimum response time was not less than or equal to maximum.",
+                (minimumResponseTime <= maximumResponseTime));
 
         final Double averageResponseTime =
                 (Double) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getAverageId());
-        Assert.assertTrue((minimumResponseTime < averageResponseTime && averageResponseTime < maximumResponseTime) ||
-                (minimumResponseTime == maximumResponseTime));
+        Assert.assertTrue("Average response time is not between (or equal to) minimum and maximum.",
+                (minimumResponseTime < averageResponseTime && averageResponseTime < maximumResponseTime) ||
+                    (minimumResponseTime == maximumResponseTime));
 
         metricsFilter.destroy();
     }
@@ -218,17 +229,18 @@ public final class TestMetricsFilter {
             }
         });
 
-        Assert.assertTrue(stringWriter.toString().length() ==
-                LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).sum());
+        Assert.assertEquals("Not all bytes were written to the wrapped response.", stringWriter.toString().length(),
+                    LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).sum());
 
         final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);
 
-        Assert.assertEquals(minimumResponseSize,
+        Assert.assertEquals("Calculated minimum response size is incorrect.", minimumResponseSize,
                 request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getMinId()));
-        Assert.assertEquals(maximumResponseSize,
+        Assert.assertEquals("Calculated maximum response size is incorrect.", maximumResponseSize,
                 request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getMaxId()));
         Assert.assertEquals(
+                "Calculated average response size is not the average of bytes written to all responses.",
                 LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).asDoubleStream().average().getAsDouble(),
                 (Double) request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getAverageId()), 0.1);
     }

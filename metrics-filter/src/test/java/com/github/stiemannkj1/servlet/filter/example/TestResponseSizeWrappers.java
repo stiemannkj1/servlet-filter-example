@@ -38,21 +38,24 @@ import static org.mockito.Mockito.*;
 public final class TestResponseSizeWrappers {
 
     @Test
-    public final void testResponseSizeServletOutputStreamWrapperResponseSize() throws IOException {
-
+    public final void testResponseSizeServletOutputStreamWrapperGetResponseSize() throws IOException {
         final StringWriter stringWriter = new StringWriter();
         final ServletOutputStream servletOutputStream = mock(ServletOutputStream.class);
+
         doAnswer((invocation) -> {
             stringWriter.write(invocation.getArgument(0, Integer.class));
             return null;
         }).when(servletOutputStream).write(any(Integer.class));
+
         final ResponseSizeServletOutputStreamWrapper responseSizeServletOutputStreamWrapper =
                 new ResponseSizeServletOutputStreamWrapper(servletOutputStream);
         final String testString = "test";
         responseSizeServletOutputStreamWrapper.print(testString);
         responseSizeServletOutputStreamWrapper.flush();
-        Assert.assertEquals(testString, stringWriter.toString());
-        Assert.assertEquals(testString.length(), responseSizeServletOutputStreamWrapper.getResponseSize());
+        Assert.assertEquals("Response text was not written correctly to wrapped ServletOutputStream.", testString,
+                stringWriter.toString());
+        Assert.assertEquals("Response size is not equal to the size of the string written to the response.",
+                testString.length(), responseSizeServletOutputStreamWrapper.getResponseSize());
     }
 
     @Test
@@ -75,7 +78,7 @@ public final class TestResponseSizeWrappers {
 
         try {
             testGetOutputStreamThenGetWriterResponse.getWriter();
-            Assert.fail("Failed to throw IllegalStateException when getOutputStream() called after getOutputStream().");
+            Assert.fail("Failed to throw IllegalStateException when getWriter() called after getOutputStream().");
         } catch (IllegalStateException e) {
             // Test passed.
         }
@@ -93,7 +96,7 @@ public final class TestResponseSizeWrappers {
                 new ResponseSizeHttpServletResponseWrapper(newMockHttpServletResponse());
         testResponseWrapper.getWriter().print("test");
         testResponseWrapper.reset();
-        Assert.assertEquals(0, testResponseWrapper.getResponseSize());
+        Assert.assertEquals("Response size was not zero after reset.", 0, testResponseWrapper.getResponseSize());
 
         try {
             testResponseWrapper.getOutputStream().print("test");
@@ -102,7 +105,7 @@ public final class TestResponseSizeWrappers {
         }
 
         testResponseWrapper.resetBuffer();
-        Assert.assertEquals(0, testResponseWrapper.getResponseSize());
+        Assert.assertEquals("Response size was not zero after reset.", 0, testResponseWrapper.getResponseSize());
 
         try {
             testResponseSizeHttpServletResponseWrapper(WriteResponseWith.WRITER, Flush.RESPONSE);
@@ -138,7 +141,8 @@ public final class TestResponseSizeWrappers {
             testResponseWrapper.getOutputStream().flush();
         }
 
-        Assert.assertEquals(testResponse.length(), testResponseWrapper.getResponseSize());
+        Assert.assertEquals("Response size is not equal to the size of the string written to the response.",
+                testResponse.length(), testResponseWrapper.getResponseSize());
     }
 
     private HttpServletResponse newMockHttpServletResponse() throws IOException {

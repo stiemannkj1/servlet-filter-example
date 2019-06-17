@@ -91,7 +91,7 @@ public final class MetricsFilterIT {
             pagesSet.add(matcher.group(1));
         }
 
-        Assert.assertFalse(pagesSet.isEmpty());
+        Assert.assertFalse("No test pages found.", pagesSet.isEmpty());
 
         final int totalLinks = pagesSet.size();
         final List<String> pages = Collections.unmodifiableList(new ArrayList<String>(pagesSet));
@@ -110,9 +110,12 @@ public final class MetricsFilterIT {
         while (specificMetricsMatcher.find()) {
 
             // Assert that no duplicate ids exist by checking the return value of Map.put().
-            Assert.assertNull(metrics.put(Long.parseLong(specificMetricsMatcher.group(1)),
-                    new Metrics(Long.parseLong(specificMetricsMatcher.group(2)),
-                            Long.parseLong(specificMetricsMatcher.group(3)))));
+            final long responseId = Long.parseLong(specificMetricsMatcher.group(1));
+            final long responseSize = Long.parseLong(specificMetricsMatcher.group(2));
+            final long responseTime = Long.parseLong(specificMetricsMatcher.group(3));
+
+            Assert.assertNull("Duplicate response id found: " + responseId, metrics.put(responseId,
+                    new Metrics(responseSize, responseTime)));
         }
 
         Assert.assertEquals(TOTAL_REQUESTS_TO_SEND + 1, metrics.size());
@@ -122,25 +125,38 @@ public final class MetricsFilterIT {
                     return specificResponseMetrics.responseSize;
                 }));
 
-        Assert.assertEquals(getLongMetric(GET_MINIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMin());
-        Assert.assertEquals(getLongMetric(GET_MAXIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMax());
-        Assert.assertEquals(getDoubleMetric(GET_AVERAGE_RESPONSE_SIZE, metricsHtml), responseSizeStats.getAverage(),
-                0.1);
+        Assert.assertEquals(
+                "Minimum response size provided by MetricsFilter differs from minimum in response metrics table.",
+                getLongMetric(GET_MINIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMin());
+        Assert.assertEquals(
+                "Maximum response size provided by MetricsFilter differs from maximum in response metrics table.",
+                getLongMetric(GET_MAXIMUM_RESPONSE_SIZE, metricsHtml), responseSizeStats.getMax());
+        Assert.assertEquals(
+                "Average response size provided by MetricsFilter differs from average of response sizes in response metrics table.",
+                getDoubleMetric(GET_AVERAGE_RESPONSE_SIZE, metricsHtml), responseSizeStats.getAverage(), 0.1);
 
         final LongSummaryStatistics responseTimeStats =
                 metricsCollection.stream().collect(Collectors.summarizingLong((specificResponseMetrics) -> {
                     return specificResponseMetrics.responseTime;
                 }));
 
-        Assert.assertEquals(getLongMetric(GET_MINIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMin());
-        Assert.assertEquals(getLongMetric(GET_MAXIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMax());
-        Assert.assertEquals(getDoubleMetric(GET_AVERAGE_RESPONSE_TIME, metricsHtml), responseTimeStats.getAverage(),
-                0.1);
+        Assert.assertEquals(
+                "Minimum response time provided by MetricsFilter differs from minimum in response metrics table.",
+                getLongMetric(GET_MINIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMin());
+        Assert.assertEquals(
+                "Maximum response time provided by MetricsFilter differs from maximum in response metrics table.",
+                getLongMetric(GET_MAXIMUM_RESPONSE_TIME, metricsHtml), responseTimeStats.getMax());
+        Assert.assertEquals(
+                "Average response time provided by MetricsFilter differs from average of response times in response metrics table.",
+                getDoubleMetric(GET_AVERAGE_RESPONSE_TIME, metricsHtml), responseTimeStats.getAverage(), 0.1);
     }
 
     private void assertPageRendered(String page) {
         final String pageHtmlResponse = getHtmlResponse(TEST_WEBAPP_BASE_URL + "/" + page);
-        Assert.assertTrue(pageHtmlResponse.contains(page) && pageHtmlResponse.contains("Hello World!"));
+        Assert.assertTrue("Test page response did not contain \"" + page + "\".",
+                pageHtmlResponse.contains(page));
+        Assert.assertTrue("Test page response did not contain \"Hello World!\"",
+                pageHtmlResponse.contains("Hello World!"));
     }
 
     private double getDoubleMetric(Pattern getMetricPattern, String metricsHtml) {

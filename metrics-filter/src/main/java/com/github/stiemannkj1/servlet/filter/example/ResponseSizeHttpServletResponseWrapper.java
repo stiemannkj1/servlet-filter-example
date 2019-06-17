@@ -33,6 +33,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
+ * Allows access to the current response size in bytes via {@link #getResponseSize()}. This class returns a
+ * {@link ResponseSizeServletOutputStreamWrapper} to calculate the response size when either {@link #getOutputStream()}
+ * or {@link #getWriter()} is called. If {@link #getWriter()} is called, the {@link
+ * ResponseSizeServletOutputStreamWrapper} is wrapped with an {@link AutoFlushingPrintWriter}.
  *
  * @author Kyle Stiemann
  */
@@ -72,18 +76,6 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
         return responseSizeServletOutputStreamWrapper;
     }
 
-    /**
-     * @return the response size in bytes.
-     */
-    public long getResponseSize() {
-
-        if (responseSizeServletOutputStreamWrapper != null) {
-            return responseSizeServletOutputStreamWrapper.getResponseSize();
-        }
-
-        return 0;
-    }
-
     @Override
     public PrintWriter getWriter() throws IOException {
 
@@ -105,6 +97,18 @@ final class ResponseSizeHttpServletResponseWrapper extends HttpServletResponseWr
         }
 
         return responseSizePrintWriter;
+    }
+
+    /**
+     * @return the response size in bytes.
+     */
+    long getResponseSize() {
+
+        if (responseSizeServletOutputStreamWrapper != null) {
+            return responseSizeServletOutputStreamWrapper.getResponseSize();
+        }
+
+        return 0;
     }
 
     @Override

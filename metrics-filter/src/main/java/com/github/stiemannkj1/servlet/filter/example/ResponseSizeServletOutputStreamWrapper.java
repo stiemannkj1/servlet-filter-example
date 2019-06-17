@@ -28,6 +28,8 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
 /**
+ * Tracks the current response size which can be obtained via {@link #getResponseSize()}.
+ *
  * @author Kyle Stiemann
  */
 final class ResponseSizeServletOutputStreamWrapper extends ServletOutputStream {

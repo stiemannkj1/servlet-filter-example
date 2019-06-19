@@ -51,14 +51,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * <p>An example {@link Servlet} {@link Filter} that collects metrics on request/response sizes and times and provides a
+ * <p>
+ * An example {@link Servlet} {@link Filter} that collects metrics on request/response sizes and times and provides a
  * unique id to differentiate responses. By default, unique response ids are generated using {@link AtomicLong} to
- * ensure uniqueness per MetricsFilter instance. However, {@link UUID} may be used to generate ids that are
- * universally unique across MetricsFilter instances (with an extremely small possibility of collisions) by setting the
+ * ensure uniqueness per MetricsFilter instance. However, {@link UUID} may be used to generate ids that are universally
+ * unique across MetricsFilter instances (with an extremely small possibility of collisions) by setting the
  * {@code "com.github.stiemannkj1.servlet.filter.example.MetricsFilter.USE_UUID_UNIQUE_RESPONSE_ID"} init-param to
  * true.</p>
  *
- * <p>This Servlet Filter implementation exposes only the Filter API as public and is marked as {@code final} to avoid
+ * <p>
+ * This Servlet Filter implementation exposes only the Filter API as public and is marked as {@code final} to avoid
  * misuse (although some package-private API is exposed for the purposes of testing).</p>
  *
  * @author Kyle Stiemann
@@ -79,9 +81,10 @@ public final class MetricsFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
 
         if ("true".equalsIgnoreCase(filterConfig.getInitParameter(USE_UUID_UNIQUE_RESPONSE_ID_KEY))) {
-            uniqueResponseIdFactory = () -> { return UUID.randomUUID().toString(); };
-        }
-        else {
+            uniqueResponseIdFactory = () -> {
+                return UUID.randomUUID().toString();
+            };
+        } else {
             uniqueResponseIdFactory = new Supplier<String>() {
                 private final AtomicLong uniqueResponseId = new AtomicLong();
 

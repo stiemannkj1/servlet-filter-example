@@ -111,8 +111,8 @@ public final class MetricsFilterIT {
 
             // Assert that no duplicate ids exist by checking the return value of Map.put().
             final String responseId = specificMetricsMatcher.group(1);
-            final long responseSize = Long.parseLong(specificMetricsMatcher.group(2));
-            final long responseTime = Long.parseLong(specificMetricsMatcher.group(3));
+            final long responseTime = Long.parseLong(specificMetricsMatcher.group(2));
+            final long responseSize = Long.parseLong(specificMetricsMatcher.group(3));
 
             Assert.assertNull("Duplicate response id found: " + responseId, metrics.put(responseId,
                     new Metrics(responseSize, responseTime)));

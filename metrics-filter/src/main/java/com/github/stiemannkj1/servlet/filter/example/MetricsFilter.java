@@ -24,11 +24,14 @@
 package com.github.stiemannkj1.servlet.filter.example;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.UUID;
@@ -72,8 +75,8 @@ public final class MetricsFilter implements Filter {
      * The type of the metric to record or display.
      */
     enum Metric {
-        RESPONSE_SIZE(0, "minimumResponseSize", "maximumResponseSize", "averageResponseSize"),
-        RESPONSE_TIME(1, "minimumResponseTime", "maximumResponseTime", "averageResponseTime");
+        RESPONSE_TIME(0, "minimumResponseTime", "maximumResponseTime", "averageResponseTime"),
+        RESPONSE_SIZE(1, "minimumResponseSize", "maximumResponseSize", "averageResponseSize");
 
         private final int index;
         private final String minId;
@@ -124,7 +127,7 @@ public final class MetricsFilter implements Filter {
      * Although we could use a more descriptive custom inner class in place of {@link List}&gt;Long&lt; (which contains
      * responseSize and responseTime), the class would need to be public to be accessed from EL in
      * com_github_stiemannkj1_servlet_filter_example_Metrics.jsp. To avoid introducing unnecessary public API, use an
-     * unmodifiable List&gt;Long&lt; for now.
+     * synchronized List&gt;Long&lt; for now.
      *
      * @see Metric#getIndex()
      */
@@ -158,8 +161,9 @@ public final class MetricsFilter implements Filter {
         final String servletPath = httpServletRequest.getServletPath();
 
         if (METRICS_JSP_PAGE.equals(servletPath)) {
-            final Map<String, List<Long>> metrics = Collections.unmodifiableMap(new HashMap<>(responseMetrics));
+            final Map<String, List<Long>> metrics = new HashMap<>(responseMetrics);
             final Collection<List<Long>> metricsCollection = metrics.values();
+            metricsCollection.removeIf((specificResponseMetrics) -> { return specificResponseMetrics.contains(null); });
             setMetricsAttributes(Metric.RESPONSE_SIZE, httpServletRequest, metricsCollection);
             setMetricsAttributes(Metric.RESPONSE_TIME, httpServletRequest, metricsCollection);
             httpServletRequest.setAttribute(RESPONSE_METRICS, metrics);
@@ -167,12 +171,20 @@ public final class MetricsFilter implements Filter {
         } else {
             final ResponseSizeHttpServletResponseWrapper httpServletResponse =
                     new ResponseSizeHttpServletResponseWrapper((HttpServletResponse) response);
-            final String currentUniqueResponseId = uniqueResponseIdFactory.get();
+            final List<Long> specificResponseMetrics = Collections.synchronizedList(new ArrayList<>(
+                    Metric.values().length));
+            String currentUniqueResponseId = uniqueResponseIdFactory.get();
+
+            while (responseMetrics.putIfAbsent(currentUniqueResponseId, specificResponseMetrics) != null) {
+                currentUniqueResponseId = uniqueResponseIdFactory.get();
+            }
+
             httpServletResponse.addHeader(UNIQUE_RESPONSE_ID, currentUniqueResponseId);
+
             final long startTime = System.nanoTime();
             chain.doFilter(httpServletRequest, httpServletResponse);
-            responseMetrics.put(currentUniqueResponseId,
-                    unmodifiableList(httpServletResponse.getResponseSize(), (System.nanoTime() - startTime)));
+            specificResponseMetrics.set(Metric.RESPONSE_TIME.getIndex(), (System.nanoTime() - startTime));
+            specificResponseMetrics.set(Metric.RESPONSE_SIZE.getIndex(), httpServletResponse.getResponseSize());
         }
     }
 
@@ -203,9 +215,5 @@ public final class MetricsFilter implements Filter {
         httpServletRequest.setAttribute(metric.getMinId(), min);
         httpServletRequest.setAttribute(metric.getMaxId(), max);
         httpServletRequest.setAttribute(metric.getAverageId(), average);
-    }
-
-    private static <T> List<T> unmodifiableList(T... ts) {
-        return Collections.unmodifiableList(Arrays.asList(ts));
     }
 }

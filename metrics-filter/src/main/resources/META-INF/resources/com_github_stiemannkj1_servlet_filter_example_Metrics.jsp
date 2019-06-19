@@ -55,8 +55,8 @@ THE SOFTWARE.
             <thead>
                 <tr>
                     <th>Response Id</th>
-                    <th>Response Size (in bytes)</th>
                     <th>Servlet Response Time (in nanoseconds)</th>
+                    <th>Response Size (in bytes)</th>
                 </tr>
             </thead>
             <tbody>

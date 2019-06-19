@@ -69,7 +69,7 @@ public final class TestMetricsFilter {
 
         final Filter metricsFilter = new MetricsFilter();
         metricsFilter.init(mock(FilterConfig.class));
-        testMetricsWithNoRequests(metricsFilter, MetricsFilter.Metric.RESPONSE_SIZE);
+        testMetricsWithNoRequests(metricsFilter, SpecificResponseMetrics.Metric.RESPONSE_SIZE);
         testMetricsFilterResponseSize(metricsFilter);
 
         metricsFilter.destroy();
@@ -80,22 +80,24 @@ public final class TestMetricsFilter {
 
         final Filter metricsFilter = new MetricsFilter();
         metricsFilter.init(mock(FilterConfig.class));
-        testMetricsWithNoRequests(metricsFilter, MetricsFilter.Metric.RESPONSE_SIZE);
+        testMetricsWithNoRequests(metricsFilter, SpecificResponseMetrics.Metric.RESPONSE_SIZE);
         testMetricsFilterResponseSize(metricsFilter);
 
         final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);
 
-        final long minimumResponseTime = (Long) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getMinId());
+        final long minimumResponseTime = (Long) request.getAttribute(
+                SpecificResponseMetrics.Metric.RESPONSE_TIME.getMinId());
         Assert.assertTrue("Minimum response time is zero after requests were filtered by MetricsFilter.",
                 (0 < minimumResponseTime));
 
-        final long maximumResponseTime = (Long) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getMaxId());
+        final long maximumResponseTime = (Long) request.getAttribute(
+                SpecificResponseMetrics.Metric.RESPONSE_TIME.getMaxId());
         Assert.assertTrue("Minimum response time was not less than or equal to maximum.",
                 (minimumResponseTime <= maximumResponseTime));
 
         final Double averageResponseTime =
-                (Double) request.getAttribute(MetricsFilter.Metric.RESPONSE_TIME.getAverageId());
+                (Double) request.getAttribute(SpecificResponseMetrics.Metric.RESPONSE_TIME.getAverageId());
         Assert.assertTrue("Average response time is not between (or equal to) minimum and maximum.",
                 (minimumResponseTime < averageResponseTime && averageResponseTime < maximumResponseTime) ||
                     (minimumResponseTime == maximumResponseTime));
@@ -188,14 +190,14 @@ public final class TestMetricsFilter {
         requestMetricsPage(request, metricsFilter);
 
         Assert.assertEquals("Calculated minimum response size is incorrect.", minimumResponseSize,
-                request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getMinId()));
+                request.getAttribute(SpecificResponseMetrics.Metric.RESPONSE_SIZE.getMinId()));
         Assert.assertEquals("Calculated maximum response size is incorrect.", maximumResponseSize,
-                request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getMaxId()));
+                request.getAttribute(SpecificResponseMetrics.Metric.RESPONSE_SIZE.getMaxId()));
         Assert.assertEquals(
                 "Calculated average response size is not the average of bytes written to all responses.",
                 LongStream.rangeClosed(minimumResponseSize, maximumResponseSize).asDoubleStream().average()
                         .getAsDouble(),
-                (Double) request.getAttribute(MetricsFilter.Metric.RESPONSE_SIZE.getAverageId()), 0.1);
+                (Double) request.getAttribute(SpecificResponseMetrics.Metric.RESPONSE_SIZE.getAverageId()), 0.1);
     }
 
     private void testMetricsFilterUniqueId(boolean testUseUUIDUniqueResponseId) throws ServletException,
@@ -243,7 +245,7 @@ public final class TestMetricsFilter {
         metricsFilter.destroy();
     }
 
-    private void testMetricsWithNoRequests(Filter metricsFilter, MetricsFilter.Metric metric)
+    private void testMetricsWithNoRequests(Filter metricsFilter, SpecificResponseMetrics.Metric metric)
             throws ServletException, IOException {
         final HttpServletRequest request = newMockHttpServletRequestWithMutableAttributes();
         requestMetricsPage(request, metricsFilter);

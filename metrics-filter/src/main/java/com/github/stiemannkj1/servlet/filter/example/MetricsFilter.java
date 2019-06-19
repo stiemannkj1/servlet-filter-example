@@ -71,67 +71,7 @@ public final class MetricsFilter implements Filter {
     static final String RESPONSE_METRICS = "responseMetrics";
     static final String METRICS_JSP_PAGE = "/com_github_stiemannkj1_servlet_filter_example_Metrics.jsp";
 
-    /**
-     * The type of the metric to record or display.
-     */
-    enum Metric {
-        RESPONSE_TIME(0, "minimumResponseTime", "maximumResponseTime", "averageResponseTime"),
-        RESPONSE_SIZE(1, "minimumResponseSize", "maximumResponseSize", "averageResponseSize");
-
-        private final int index;
-        private final String minId;
-        private final String maxId;
-        private final String averageId;
-
-        private Metric(int index, String minId, String maxId, String averageId) {
-            this.index = index;
-            this.minId = minId;
-            this.maxId = maxId;
-            this.averageId = averageId;
-        }
-
-        /**
-         * @return the index of the metric type when stored in a list in {@link #responseMetrics}.
-         *
-         * @see #responseMetrics
-         * @see #setMetricsAttributes(com.github.stiemannkj1.servlet.filter.example.MetricsFilter.Metric,
-         * javax.servlet.http.HttpServletRequest, java.util.Collection)
-         */
-        private int getIndex() {
-            return index;
-        }
-
-        /**
-         * @return the request attribute name and client id for the minimum value for the metric.
-         */
-        public String getMinId() {
-            return minId;
-        }
-
-        /**
-         * @return the request attribute name and client id for the maximum value for the metric.
-         */
-        public String getMaxId() {
-            return maxId;
-        }
-
-        /**
-         * @return the request attribute name and client id for the average value for the metric.
-         */
-        public String getAverageId() {
-            return averageId;
-        }
-    }
-
-    /**
-     * Although we could use a more descriptive custom inner class in place of {@link List}&gt;Long&lt; (which contains
-     * responseSize and responseTime), the class would need to be public to be accessed from EL in
-     * com_github_stiemannkj1_servlet_filter_example_Metrics.jsp. To avoid introducing unnecessary public API, use an
-     * synchronized List&gt;Long&lt; for now.
-     *
-     * @see Metric#getIndex()
-     */
-    private final ConcurrentMap<String, List<Long>> responseMetrics = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, SpecificResponseMetrics> responseMetrics = new ConcurrentHashMap<>();
 
     private Supplier<String> uniqueResponseIdFactory;
 
@@ -161,18 +101,21 @@ public final class MetricsFilter implements Filter {
         final String servletPath = httpServletRequest.getServletPath();
 
         if (METRICS_JSP_PAGE.equals(servletPath)) {
-            final Map<String, List<Long>> metrics = new HashMap<>(responseMetrics);
-            final Collection<List<Long>> metricsCollection = metrics.values();
-            metricsCollection.removeIf((specificResponseMetrics) -> { return specificResponseMetrics.contains(null); });
-            setMetricsAttributes(Metric.RESPONSE_SIZE, httpServletRequest, metricsCollection);
-            setMetricsAttributes(Metric.RESPONSE_TIME, httpServletRequest, metricsCollection);
+            final Map<String, SpecificResponseMetrics> metrics = new HashMap<>(responseMetrics);
+            final Collection<SpecificResponseMetrics> metricsCollection = metrics.values();
+
+            metricsCollection.removeIf((specificResponseMetrics) -> {
+                return specificResponseMetrics.getMetrics() == null;
+            });
+
+            setMetricsAttributes(SpecificResponseMetrics.Metric.RESPONSE_SIZE, httpServletRequest, metricsCollection);
+            setMetricsAttributes(SpecificResponseMetrics.Metric.RESPONSE_TIME, httpServletRequest, metricsCollection);
             httpServletRequest.setAttribute(RESPONSE_METRICS, metrics);
             chain.doFilter(httpServletRequest, response);
         } else {
             final ResponseSizeHttpServletResponseWrapper httpServletResponse =
                     new ResponseSizeHttpServletResponseWrapper((HttpServletResponse) response);
-            final List<Long> specificResponseMetrics = Collections.synchronizedList(new ArrayList<>(
-                    Metric.values().length));
+            final SpecificResponseMetrics specificResponseMetrics = new SpecificResponseMetrics();
             String currentUniqueResponseId = uniqueResponseIdFactory.get();
 
             while (responseMetrics.putIfAbsent(currentUniqueResponseId, specificResponseMetrics) != null) {
@@ -183,8 +126,8 @@ public final class MetricsFilter implements Filter {
 
             final long startTime = System.nanoTime();
             chain.doFilter(httpServletRequest, httpServletResponse);
-            specificResponseMetrics.set(Metric.RESPONSE_TIME.getIndex(), (System.nanoTime() - startTime));
-            specificResponseMetrics.set(Metric.RESPONSE_SIZE.getIndex(), httpServletResponse.getResponseSize());
+            specificResponseMetrics.setMetrics((System.nanoTime() - startTime),
+                    httpServletResponse.getResponseSize());
         }
     }
 
@@ -194,8 +137,8 @@ public final class MetricsFilter implements Filter {
         responseMetrics.clear();
     }
 
-    private void setMetricsAttributes(Metric metric, HttpServletRequest httpServletRequest,
-            Collection<List<Long>> metrics) {
+    private void setMetricsAttributes(SpecificResponseMetrics.Metric metric, HttpServletRequest httpServletRequest,
+            Collection<SpecificResponseMetrics> metrics) {
 
         long min = 0;
         long max = 0;
